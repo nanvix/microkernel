@@ -59,7 +59,7 @@
 #if __NANVIX_IKC_USES_ONLY_MAILBOX
 	#define MAILBOX_PORT_NR (64)
 #else
-	#define MAILBOX_PORT_NR (16)
+	#define MAILBOX_PORT_NR (24)
 #endif
 
 	/**
@@ -68,7 +68,7 @@
 #if __NANVIX_IKC_USES_ONLY_MAILBOX
 	#define KMAILBOX_PORT_NR (32)
 #else
-	#define KMAILBOX_PORT_NR (16)
+	#define KMAILBOX_PORT_NR (24)
 #endif
 
 	/**

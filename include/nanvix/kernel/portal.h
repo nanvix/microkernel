@@ -58,7 +58,7 @@
 	/**
 	 * @brief Number of ports per portal.
 	 */
-	#define KPORTAL_PORT_NR 16
+	#define KPORTAL_PORT_NR 24
 
 	/**
 	 * @brief Maximum number of active portals.
