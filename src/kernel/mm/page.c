@@ -257,9 +257,9 @@ PUBLIC int upage_inval(vaddr_t vaddr)
  * @retval -EINVAL     Target address is not properly aligned.
  * @retval -EFAULT     Target address does not lie in user space.
  * @retval -EINVAL     Invalid page directory.
+ * @retval -EINVAL     Frame is not a user page frame.
  *
  * @todo Check for bad page directory.
- * @todo Check for bad page frame.
  *
  * @bug Properly flush TLB in multicores.
  *
@@ -285,7 +285,9 @@ PUBLIC int upage_map(struct pde *pgdir, vaddr_t vaddr, frame_t frame)
 	if (vaddr & (~PAGE_MASK))
 		return (-EINVAL);
 
-	/* TODO: check for bad page frame. */
+	/* Check for bad page frame. */
+	if (!frame_is_valid_num(frame))
+		return (-EINVAL);
 
 	/*
 	 * Retrieve page directory entry
