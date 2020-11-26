@@ -262,8 +262,8 @@
 	 */
 	struct condvar
 	{
-		spinlock_t lock;      /**< Lock for sleeping queue. */
-		struct thread *queue; /**< Sleeping queue.          */
+		spinlock_t lock;                   /**< Lock for sleeping queue. */
+		struct resource_arrangement queue; /**< Sleeping queue.          */
 	};
 
 	/**
@@ -272,7 +272,23 @@
 	 * The @p COND_INITIALIZER macro statically initiallizes a
 	 * conditional variable.
 	 */
-	#define COND_INITIALIZER { .lock = SPINLOCK_UNLOCKED, .queue = NULL }
+	#define COND_STATIC_INITIALIZER                      \
+	{                                                    \
+		.lock  = SPINLOCK_UNLOCKED,                      \
+		.queue = RESOURCE_ARRANGEMENT_STATIC_INITIALIZER \
+	}
+
+	/**
+	 * @brief initializer for condition variables.
+	 *
+	 * The @p COND_INITIALIZER macro initiallizes a
+	 * conditional variable.
+	 */
+	#define COND_INITIALIZER                      \
+	(struct condvar){                             \
+		.lock  = SPINLOCK_UNLOCKED,               \
+		.queue = RESOURCE_ARRANGEMENT_INITIALIZER \
+	}
 
 	/**
 	 * @brief Initializes a condition variable.
@@ -282,7 +298,7 @@
 	static inline void cond_init(struct condvar *cond)
 	{
 		spinlock_init(&cond->lock);
-		cond->queue = NULL;
+		cond->queue = RESOURCE_ARRANGEMENT_INITIALIZER;
 	}
 
 	/**
@@ -295,6 +311,28 @@
 	 * failure, a negative error code is returned instead.
 	 */
 	EXTERN int cond_wait(struct condvar *cond, spinlock_t *lock);
+
+	/**
+	 * @brief Unlocks a specific thread that is waiting on a condition
+	 * variable.
+	 *
+	 * @param cond Target condition variable.
+	 * @param tid  Target thread ID.
+	 *
+	 * @returns Upon successful completion zero is returned. Upon
+	 * failure, a negative error code is returned instead.
+	 */
+	EXTERN int cond_unicast(struct condvar *cond, int tid);
+
+	/**
+	 * @brief Unlocks first thread waiting on a condition variable.
+	 *
+	 * @param cond Target condition variable.
+	 *
+	 * @returns Upon successful completion zero is returned. Upon
+	 * failure, a negative error code is returned instead.
+	 */
+	EXTERN int cond_anycast(struct condvar *cond);
 
 	/**
 	 * @brief Unlocks all threads waiting on a condition variable.
@@ -329,11 +367,27 @@
 	 *
 	 * @param x Initial value for semaphore.
 	 */
-	#define SEMAPHORE_INITIALIZER(x) \
-	{                                \
-		.count = (x),                \
-		.lock = SPINLOCK_UNLOCKED,   \
-		.cond = COND_INITIALIZER,    \
+	#define SEMAPHORE_STATIC_INITIALIZER(x) \
+	{                                       \
+		.count = (x),                       \
+		.lock  = SPINLOCK_UNLOCKED,         \
+		.cond  = COND_STATIC_INITIALIZER,   \
+	}
+
+	/**
+	 * @brief Initializer for semaphores.
+	 *
+	 * The @p SEMAPHORE_INIT macro initializes the fields of
+	 * a semaphore. The initial value of the semaphore is set to @p x
+	 * in the initialization.
+	 *
+	 * @param x Initial value for semaphore.
+	 */
+	#define SEMAPHORE_INITIALIZER(x)        \
+	(struct semaphore) {                    \
+		.count = (x),                       \
+		.lock  = SPINLOCK_UNLOCKED,         \
+		.cond  = COND_INITIALIZER,          \
 	}
 
 	/**
