@@ -32,7 +32,7 @@
 /**
  * @brief Semaphore variable for system call dispatcher.
  */
-PRIVATE struct semaphore syssem = SEMAPHORE_INITIALIZER(0);
+PRIVATE struct semaphore syssem;
 
 /**
  * @brief System call scoreboard.
@@ -537,6 +537,8 @@ PUBLIC int do_kcall(
  */
 PUBLIC void syscall_init(void)
 {
+	semaphore_init(&syssem, 0);
+
 	for (unsigned coreid = 0; coreid < CORES_NUM; ++coreid)
 	{
 		sysboard[coreid].syscall_nr = -1;
