@@ -26,6 +26,8 @@
 #include <nanvix/kernel/thread.h>
 #include <nanvix/const.h>
 
+#include "thread/common.h"
+
 /*============================================================================*
  * cond_wait()                                                                *
  *============================================================================*/
@@ -52,14 +54,104 @@ PUBLIC int cond_wait(struct condvar *cond, spinlock_t *lock)
 
 	/* Enqueue calling thread. */
 	spinlock_lock(&cond->lock);
-		curr_thread->next = cond->queue;
-		cond->queue = curr_thread;
+		resource_enqueue(&cond->queue, &curr_thread->resource);
 	spinlock_unlock(&cond->lock);
 
 	/* Put the calling thread to sleep. */
 	thread_asleep(lock);
 
 	return (0);
+}
+
+/*============================================================================*
+ * cond_unicast()                                                             *
+ *============================================================================*/
+
+/**
+ * The cond_unicast() function sends a wakeup signal to a specific
+ * thread that are currently blocked waiting on the conditional
+ * variable pointed to by @p cond.
+ *
+ * @see cond_wait().
+ *
+ * @author Pedro Henrique Penna and João Vicente Souto
+ */
+PUBLIC int cond_unicast(struct condvar *cond, int tid)
+{
+	int ret;
+	struct thread * t;
+
+	KASSERT(cond != NULL);
+
+	if (tid < 0)
+		return (-EINVAL);
+
+	ret = (-EAGAIN);
+
+	spinlock_lock(&cond->lock);
+
+		if ((t = thread_get(tid)) == NULL)
+			goto error;
+
+		if ((resource_pop(&cond->queue, &t->resource)) < 0)
+			goto error;
+
+		thread_wakeup(t);
+		ret = (0);
+
+error:
+	spinlock_unlock(&cond->lock);
+
+	return (ret);
+}
+
+/*============================================================================*
+ * cond_multicast()                                                           *
+ *============================================================================*/
+
+/**
+ * The cond_multicast() function sends a wakeup signal to N first thread
+ * that are currently blocked waiting on the conditional variable
+ * pointed to by @p cond.
+ *
+ * @see cond_wait().
+ *
+ * @author Pedro Henrique Penna and João Vicente Souto
+ */
+PRIVATE int cond_multicast(struct condvar *cond, int nwakeups)
+{
+	KASSERT(cond != NULL);
+
+	spinlock_lock(&cond->lock);
+
+		/* Wakeup threads. */
+		while (UNLIKELY(cond->queue.size && nwakeups))
+		{
+			nwakeups--;
+			thread_wakeup((struct thread *) resource_dequeue(&cond->queue));
+		}
+
+	spinlock_unlock(&cond->lock);
+
+	return (0);
+}
+
+/*============================================================================*
+ * cond_anycast()                                                             *
+ *============================================================================*/
+
+/**
+ * The cond_anycast() function sends a wakeup signal to first thread
+ * that are currently blocked waiting on the conditional variable
+ * pointed to by @p cond.
+ *
+ * @see cond_wait().
+ *
+ * @author Pedro Henrique Penna and João Vicente Souto
+ */
+PUBLIC int cond_anycast(struct condvar *cond)
+{
+	return (cond_multicast(cond, 1));
 }
 
 /*============================================================================*
@@ -73,22 +165,10 @@ PUBLIC int cond_wait(struct condvar *cond, spinlock_t *lock)
  *
  * @see cond_wait().
  *
- * @author Pedro Henrique Penna
+ * @author Pedro Henrique Penna and João Vicente Souto
  */
 PUBLIC int cond_broadcast(struct condvar *cond)
 {
-	KASSERT(cond != NULL);
-
-	spinlock_lock(&cond->lock);
-
-		/* Wakeup all threads. */
-		while (UNLIKELY(cond->queue != NULL))
-		{
-			thread_wakeup(cond->queue);
-			cond->queue = cond->queue->next;
-		}
-
-	spinlock_unlock(&cond->lock);
-
-	return (0);
+	return (cond_multicast(cond, KTHREAD_MAX));
 }
+
