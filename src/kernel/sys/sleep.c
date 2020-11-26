@@ -41,7 +41,7 @@ EXTENSION PRIVATE struct
 } queues[KTHREAD_MAX] = {
 	[0 ... (KTHREAD_MAX - 1)] = {
 		.tid  = KTHREAD_NULL_TID,
-		.cond = COND_INITIALIZER
+		.cond = COND_STATIC_INITIALIZER
 	},
 };
 
