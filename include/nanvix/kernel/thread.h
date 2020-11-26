@@ -32,8 +32,12 @@
 #ifndef NANVIX_THREAD_H_
 #define NANVIX_THREAD_H_
 
+	/* Must come first. */
+	#define __NEED_RESOURCE
+
 	/* External dependencies. */
 	#include <nanvix/hal.h>
+	#include <nanvix/hal/resource.h>
 	#include <nanvix/const.h>
 
 /*============================================================================*
@@ -105,13 +109,17 @@
 	 */
 	struct thread
 	{
-		int tid;               /**< Thread ID.              */
-		int coreid;            /**< Core ID.                */
-		int state;             /**< State.                  */
-		void *arg;             /**< Argument.               */
-		void *(*start)(void*); /**< Starting routine.       */
-		struct context *ctx;   /**< Preempted context.      */
-		struct thread *next;   /**< Next thread in a queue. */
+		/*
+		 * XXX: Don't Touch! This Must Come First!
+		 */
+		struct resource resource; /**< Generic resource information. */
+
+		int tid;                  /**< Thread ID.                    */
+		int coreid;               /**< Core ID.                      */
+		int state;                /**< State.                        */
+		void *arg;                /**< Argument.                     */
+		void *(*start)(void*);    /**< Starting routine.             */
+		struct context *ctx;      /**< Preempted context.            */
 	};
 
 	/**
