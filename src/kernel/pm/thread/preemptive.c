@@ -52,13 +52,6 @@ PRIVATE struct stack *kstacks[THREAD_MAX];
 /**@}*/
 
 /**
- * @brief Gets idle thread pointer.
- *
- * @warning Not use core 0 because it is not a idle thread.
- */
-#define IDLE_THREAD(coreid) (&threads[coreid])
-
-/**
  * @brief Number of idle threads.
  *
  * @details Master + Idles == SYS_THREAD_MAX.
@@ -81,12 +74,6 @@ PRIVATE struct thread * user_threads = (KTHREAD_MASTER + SYS_THREAD_MAX);
  * @brief Schedule queues.
  */
 PRIVATE struct resource_arrangement schedules;
-
-/**
- * @brief Fence to synchronize the idle thread in the initialization.
- */
-PRIVATE spinlock_t idle_fence;
-PRIVATE struct semaphore idle_sem;
 
 /*============================================================================*
  * Thread Allocation/Release                                                  *
@@ -135,6 +122,10 @@ PRIVATE int thread_switch_to(struct context ** previous, struct context ** next)
 	if (thread_get_curr_id() == KTHREAD_MASTER_TID)
 		return (-EINVAL);
 
+	/* Does a thread try to switch to itself? */
+	if (previous == next)
+		return (-EINVAL);
+
 	/* Invalid previous. */
 	if ((previous == NULL) || (!mm_is_kaddr(VADDR(previous))))
 		return (-EINVAL);
@@ -163,7 +154,7 @@ PRIVATE int thread_switch_to(struct context ** previous, struct context ** next)
 *
 * @param new_thread New thread to insert into @idle queue.
 */
-PRIVATE void thread_schedule(struct thread * new_thread, struct section_guard * guard)
+PUBLIC void thread_schedule(struct thread * new_thread)
 {
 	/* Valid user thread. */
 	KASSERT(WITHIN(new_thread, &user_threads[0], &user_threads[THREAD_MAX]));
@@ -174,11 +165,6 @@ PRIVATE void thread_schedule(struct thread * new_thread, struct section_guard * 
 
 	/* Enqueue new thread. */
 	resource_enqueue(&schedules, &new_thread->resource);
-
-	/* Notifies that is a new thread available. */
-	thread_unlock_tm(guard);
-		semaphore_up(&idle_sem);
-	thread_lock_tm(guard);
 }
 
 /*============================================================================*
@@ -239,7 +225,7 @@ PUBLIC int thread_yield(void)
 
 				/* Make user thread schedulable. */
 				if (curr != idle)
-					thread_schedule(curr, &guard);
+					thread_schedule(curr);
 			}
 		}
 
@@ -301,6 +287,20 @@ PUBLIC int thread_yield(void)
 }
 
 /*============================================================================*
+ * thread_handler()                                                           *
+ *============================================================================*/
+
+/**
+ * @brief Handle scheduling kernel events.
+ */
+PRIVATE void thread_handler(int evnum)
+{
+	KASSERT(evnum == KEVENT_SCHED);
+
+	thread_yield();
+}
+
+/*============================================================================*
  * Idle Threads Responsibility                                                *
  *============================================================================*/
 
@@ -317,50 +317,37 @@ PUBLIC int thread_yield(void)
 */
 PRIVATE NORETURN void thread_idle(void)
 {
-	struct thread * idle; /* Idle Thread.    */
-	struct section_guard guard; /* Section guard.    */
+	struct thread * idle;       /* Idle Thread.   */
+	struct section_guard guard; /* Section guard. */
 
 	idle = thread_get_curr();
 
 	KASSERT(WITHIN(idle, &idle_threads[0], &idle_threads[IDLE_THREAD_MAX]));
 
-	/* Ensure that the first thread will get the fisrt user thread. */
-	if (idle == &idle_threads[0])
-	{
-		/* Waits a thread be available. */
-		semaphore_down(&idle_sem);
+	interrupts_enable();
 
-		/* Release fence.. */
-		spinlock_unlock(&idle_fence);
-
-		/* Schedule user thread. */
-		KASSERT(thread_yield() == 0);
-	}
-
-	/* Waits first thread. */
-	else
-	{
-		spinlock_lock(&idle_fence);
-		spinlock_unlock(&idle_fence);
-	}
-
-	/* Lifecycle of idle thread. */
-	while (!tm_shutdown)
-	{
-		/* Waits a thread be available. */
-		semaphore_down(&idle_sem);
-
-		/* Schedule user thread. */
-		KASSERT(thread_yield() == 0);
-	}
+	if (LIKELY(thread_get_coreid(idle) != COREID_MASTER))
+		interrupt_mask(INTERRUPT_TIMER);
 
 	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
+
+	thread_lock_tm(&guard);
+
+		/* Lifecycle of idle thread. */
+		while (UNLIKELY(!tm_shutdown))
+		{
+			thread_unlock_tm(&guard);
+				kevent_wait(KEVENT_WAKEUP);
+			thread_lock_tm(&guard);
+		}
+
+	thread_unlock_tm(&guard);
 
 	/* Indicates that the underlying core will be reset. */
 	KASSERT(core_release() == 0);
 
 		thread_lock_tm(&guard);
-			idle->state = THREAD_ZOMBIE;
+			thread_free(idle);
 			cond_broadcast(&joincond[KERNEL_THREAD_ID(idle)]);
 		thread_unlock_tm(&guard);
 
@@ -401,6 +388,9 @@ PUBLIC NORETURN void thread_exit(void *retval)
 
 	/* Gets current thread information. */
 	curr = thread_get_curr();
+
+	/* Do not get scheduled because it will exit the core. */
+	interrupts_disable();
 
 	/* Valid thread. */
 	/* @TODO Do we need sure that only user thread will call thread_exit? */
@@ -463,7 +453,8 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 	int utid;                   /* Kernel thread ID.         */
 	struct stack * ustack;      /* User stack pointer.       */
 	struct stack * kstack;      /* Kernel stack pointer.     */
-	struct thread *new_thread;  /* New thread.               */
+	struct thread * idle;       /* Idle thread.              */
+	struct thread * new_thread; /* New thread.               */
 	struct section_guard guard; /* Section guard.            */
 
 	/* Sanity check. */
@@ -505,6 +496,9 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 		new_thread->arg   = arg;
 		new_thread->start = start;
 
+		/* Static put the thread on a coreid. */
+		KASSERT((new_thread->coreid = (utid % IDLE_THREAD_MAX) + 1) > 0);
+
 		/* Store reference to the stacks of the thread. */
 		ustacks[utid] = ustack;
 		kstacks[utid] = kstack;
@@ -513,7 +507,12 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 		KASSERT((new_thread->ctx = context_create(thread_start, ustack, kstack)) != NULL);
 
 		/* Puts thread in the schedule queue. */
-		thread_schedule(new_thread, &guard);
+		thread_schedule(new_thread);
+
+		/* Is the Idle thread running? */
+		idle = IDLE_THREAD(new_thread->coreid);
+		if (idle->state == THREAD_RUNNING)
+			kevent_notify(KEVENT_SCHED, idle->coreid);
 
 	thread_unlock_tm(&guard);
 
@@ -561,11 +560,10 @@ PUBLIC void __thread_init(void)
 	/* Initialize the schedule queue. */
 	schedules = RESOURCE_ARRANGEMENT_INITIALIZER;
 
-	/* Initialize the fence for idle threads. */
-	spinlock_init(&idle_fence);
-	spinlock_lock(&idle_fence);
-	semaphore_init(&idle_sem, 0);
+	/* Set schedule handler. */
+	KASSERT(kevent_set_handler(KEVENT_SCHED, thread_handler) == 0);
 
+	/* Spawn idle threads. */
 	for (int coreid = 1; coreid <= IDLE_THREAD_MAX; coreid++)
 	{
 		KASSERT((idle = thread_alloc()) != NULL);

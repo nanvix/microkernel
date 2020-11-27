@@ -30,6 +30,7 @@
 
 	#include <nanvix/hal/section_guard.h>
 	#include <nanvix/kernel/thread.h>
+	#include <nanvix/kernel/event.h>
 	#include <nanvix/kernel/mm.h>
 	#include <nanvix/const.h>
 	#include <posix/errno.h>
@@ -198,6 +199,23 @@
 	 * @param tid Thread's ID
 	 */
 	EXTERN void thread_search_retval(void **retval, int tid);
+
+#if CORE_SUPPORTS_MULTITHREADING
+
+	/*============================================================================*
+	 * Scheduling                                                                 *
+	 *============================================================================*/
+
+	/**
+	 * @brief Gets idle thread pointer.
+	 *
+	 * @warning Not use core 0 because it is not a idle thread.
+	 */
+	#define IDLE_THREAD(coreid) (&threads[coreid])
+
+	EXTERN void thread_schedule(struct thread * new_thread);
+
+#endif /* CORE_SUPPORTS_MULTITHREADING */
 
 	/*============================================================================*
 	 * Initialization                                                             *

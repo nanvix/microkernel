@@ -74,8 +74,20 @@ PUBLIC void thread_asleep(
 	/* Release user critical region. */
 	spinlock_unlock(user_lock);
 
+#if !CORE_SUPPORTS_MULTITHREADING
+
 		/* Waits wake up. */
 		core_sleep();
+
+#else /* CORE_SUPPORTS_MULTITHREADING */
+
+		/* Master thread do not leave the core. */
+		if (curr == KTHREAD_MASTER)
+			kevent_wait(KEVENT_WAKEUP);
+		else
+			thread_yield();
+
+#endif /* CORE_SUPPORTS_MULTITHREADING */
 
 	/* Lock the user critical region. */
 	spinlock_lock(user_lock);
@@ -97,6 +109,37 @@ PUBLIC void thread_asleep(
  */
 PUBLIC void thread_wakeup(struct thread *t)
 {
+#if !CORE_SUPPORTS_MULTITHREADING
+
 	/* Wake up thread. */
 	core_wakeup(thread_get_coreid(t));
+
+#else /* CORE_SUPPORTS_MULTITHREADING */
+
+	int coreid;                 /* Core ID.       */
+	struct section_guard guard; /* Section guard. */
+
+	/* Prevent this call be preempted by any maskable interrupt. */
+	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
+
+	thread_lock_tm(&guard);
+
+		/* Wake up master thread. */
+		if (t == KTHREAD_MASTER)
+			kevent_notify(KEVENT_WAKEUP, COREID_MASTER);
+
+		/* Wake up user thread. */
+		else
+		{
+			thread_schedule(t);
+
+			coreid = thread_get_coreid(t);
+
+			if (IDLE_THREAD(coreid)->state == THREAD_RUNNING)
+				kevent_notify(KEVENT_SCHED, coreid);
+		}
+
+	thread_unlock_tm(&guard);
+
+#endif /* CORE_SUPPORTS_MULTITHREADING */
 }
