@@ -28,6 +28,7 @@
 #include <nanvix/kernel/mm.h>
 #include <nanvix/kernel/noc.h>
 #include <nanvix/kernel/syscall.h>
+#include <nanvix/kernel/event.h>
 #include <nanvix/kernel/thread.h>
 #include <nanvix/const.h>
 #include <nanvix/hlib.h>
@@ -89,6 +90,7 @@ PUBLIC void kmain(int argc, const char *argv[])
 	mm_init();
 	noc_init();
 	syscall_init();
+	kevent_init();
 
 	kprintf("[kernel][dev] enabling hardware interrupts");
 	interrupts_enable();
