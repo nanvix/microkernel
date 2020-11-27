@@ -22,15 +22,6 @@
  * SOFTWARE.
  */
 
-/* Must come first. */
-#define __NEED_RESOURCE
-
-#include <nanvix/hal.h>
-#include <nanvix/hlib.h>
-#include <nanvix/kernel/mailbox.h>
-#include <posix/errno.h>
-#include <posix/stdarg.h>
-
 #include "communicator.h"
 #include "mailbox.h"
 

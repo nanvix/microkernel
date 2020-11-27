@@ -32,11 +32,9 @@
 #ifndef NANVIX_KMAILBOX_H_
 #define NANVIX_KMAILBOX_H_
 
-	#include <nanvix/hal.h>
-	#include <nanvix/const.h>
-	#include <nanvix/hlib.h>
-	#include <posix/stdarg.h>
-	#include <posix/errno.h>
+	#include <nanvix/kernel/mailbox.h>
+
+	#include "active.h"
 
 #if __TARGET_HAS_MAILBOX
 

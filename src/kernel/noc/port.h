@@ -25,7 +25,11 @@
 #ifndef NANVIX_NOC_PORT_H_
 #define NANVIX_NOC_PORT_H_
 
+	/* Must come first. */
+	#define __NEED_RESOURCE
+
 	#include <nanvix/hal.h>
+	#include <nanvix/hal/resource.h>
 	#include <nanvix/hlib.h>
 	#include <nanvix/const.h>
 	#include <posix/errno.h>

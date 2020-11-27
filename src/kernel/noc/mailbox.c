@@ -22,16 +22,6 @@
  * SOFTWARE.
  */
 
-/* Must come first. */
-#define __NEED_RESOURCE
-
-#include <nanvix/hal.h>
-#include <nanvix/hlib.h>
-#include <nanvix/kernel/mailbox.h>
-#include <posix/errno.h>
-#include <posix/stdarg.h>
-
-#include "active.h"
 #include "mailbox.h"
 
 #if __TARGET_HAS_MAILBOX
@@ -66,13 +56,13 @@ PRIVATE struct active_pool mbxpool;                            /**< Mailbox pool
  * @name Prototype functions.
  */
 /**@{*/
-int wrapper_mailbox_open(int, int);
-int wrapper_mailbox_allow(struct active *, int);
-int mailbox_header_config(struct mbuffer *, const struct active_config *);
-int mailbox_header_check(struct mbuffer *, const struct active_config *);
-int mailbox_source_check(struct mbuffer *, int);
-int mailbox_get_actid(int);
-int mailbox_get_portid(int);
+PRIVATE int wrapper_mailbox_open(int, int);
+PRIVATE int wrapper_mailbox_allow(struct active *, int);
+PRIVATE int mailbox_header_config(struct mbuffer *, const struct active_config *);
+PRIVATE int mailbox_header_check(struct mbuffer *, const struct active_config *);
+PRIVATE int mailbox_source_check(struct mbuffer *, int);
+PRIVATE int mailbox_get_actid(int);
+PRIVATE int mailbox_get_portid(int);
 /**@}*/
 
 /*============================================================================*
@@ -82,7 +72,7 @@ int mailbox_get_portid(int);
 /**
  * @brief Initializes the mbuffers table lock.
  */
-void do_mailbox_table_init(void)
+PRIVATE void do_mailbox_table_init(void)
 {
 	/* Initializes the mbuffers. */
 	for (int i = 0; i < KMAILBOX_MESSAGE_BUFFERS_MAX; ++i)
@@ -184,7 +174,7 @@ void do_mailbox_table_init(void)
  * @returns Upon successful completion, zero is returned. Upon failure, a
  * negative error code is returned instead.
  */
-int wrapper_mailbox_open(int local, int remote)
+PRIVATE int wrapper_mailbox_open(int local, int remote)
 {
 	UNUSED(local);
 
@@ -203,7 +193,7 @@ int wrapper_mailbox_open(int local, int remote)
  *
  * @returns Zero is returned.
  */
-int wrapper_mailbox_allow(struct active * act, int remote)
+PRIVATE int wrapper_mailbox_allow(struct active * act, int remote)
 {
 	UNUSED(act);
 	UNUSED(remote);
@@ -223,7 +213,7 @@ int wrapper_mailbox_allow(struct active * act, int remote)
  *
  * @returns Zero is returned.
  */
-int mailbox_header_config(struct mbuffer * buf, const struct active_config * config)
+PRIVATE int mailbox_header_config(struct mbuffer * buf, const struct active_config * config)
 {
 	buf->message.header.src  = config->local_addr;
 	buf->message.header.dest = config->remote_addr;
@@ -243,11 +233,12 @@ int mailbox_header_config(struct mbuffer * buf, const struct active_config * con
  *
  * @returns Non-zero if the mbuffer is destinate to current configuration.
  */
-int mailbox_header_check(struct mbuffer * buf, const struct active_config * config)
+PRIVATE int mailbox_header_check(struct mbuffer * buf, const struct active_config * config)
 {
-	return ((buf->message.header.dest == config->local_addr) &&
-	        (mailbox_source_check(buf, config->remote_addr))
-	       );
+	return (
+		(buf->message.header.dest == config->local_addr) &&
+		(mailbox_source_check(buf, config->remote_addr))
+	);
 }
 
 /*============================================================================*
@@ -263,7 +254,7 @@ int mailbox_header_check(struct mbuffer * buf, const struct active_config * conf
  * @returns Non-zero if the mbuffer src matches the current configuration, and
  * zero otherwise.
  */
-int mailbox_source_check(struct mbuffer * buf, int src_mask)
+PRIVATE int mailbox_source_check(struct mbuffer * buf, int src_mask)
 {
 	int msg_source;
 	int mask_node;
@@ -289,26 +280,6 @@ int mailbox_source_check(struct mbuffer * buf, int src_mask)
 }
 
 /*============================================================================*
- * mailbox_laddress_calc()                                                    *
- *============================================================================*/
-
-/**
- * @brief Calculates the laddress of a communicator.
- *
- * @param fd   Node fd.
- * @param port Port number.
- *
- * @returns Returns the composed laddress.
- *
- * @note The correctness of parameters is responsibility of the caller. This
- * function only applies the parameters to the calculation formula.
- */
-int mailbox_laddress_calc(int fd, int port)
-{
-	return (ACTIVE_LADDRESS_COMPOSE(fd, port, MAILBOX_PORT_NR));
-}
-
-/*============================================================================*
  * mailbox_get_actid()                                                        *
  *============================================================================*/
 
@@ -320,7 +291,7 @@ int mailbox_laddress_calc(int fd, int port)
  * @returns Upon successful completion, zero is returned. Upon failure, a
  * negative error code is returned instead.
  */
-int mailbox_get_actid(int id)
+PRIVATE int mailbox_get_actid(int id)
 {
 	return ((id < 0) ? (id) : (id / (MAILBOX_PORT_NR + 1)));
 }
@@ -337,9 +308,29 @@ int mailbox_get_actid(int id)
  * @returns Upon successful completion, zero is returned. Upon failure, a
  * negative error code is returned instead.
  */
-int mailbox_get_portid(int id)
+PRIVATE int mailbox_get_portid(int id)
 {
 	return ((id < 0) ? (id) : (id % (MAILBOX_PORT_NR + 1)));
+}
+
+/*============================================================================*
+ * mailbox_laddress_calc()                                                    *
+ *============================================================================*/
+
+/**
+ * @brief Calculates the laddress of a communicator.
+ *
+ * @param fd   Node fd.
+ * @param port Port number.
+ *
+ * @returns Returns the composed laddress.
+ *
+ * @note The correctness of parameters is responsibility of the caller. This
+ * function only applies the parameters to the calculation formula.
+ */
+PUBLIC int mailbox_laddress_calc(int fd, int port)
+{
+	return (ACTIVE_LADDRESS_COMPOSE(fd, port, MAILBOX_PORT_NR));
 }
 
 /*============================================================================*

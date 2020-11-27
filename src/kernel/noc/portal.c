@@ -22,15 +22,6 @@
  * SOFTWARE.
  */
 
-/* Must come first. */
-#define __NEED_RESOURCE
-
-#include <nanvix/hal.h>
-#include <nanvix/kernel/portal.h>
-#include <nanvix/hlib.h>
-#include <posix/errno.h>
-
-#include "active.h"
 #include "portal.h"
 
 #if __TARGET_HAS_PORTAL && !__NANVIX_IKC_USES_ONLY_MAILBOX
@@ -65,12 +56,12 @@ PRIVATE struct active_pool portalpool;                           /**< Portal poo
  * @name Prototype functions.
  */
 /**@{*/
-int wrapper_portal_allow(struct active *, int);
-int portal_header_config(struct mbuffer *, const struct active_config *);
-int portal_header_check(struct mbuffer *, const struct active_config *);
-int portal_source_check(struct mbuffer *, int);
-int portal_get_actid(int);
-int portal_get_portid(int);
+PRIVATE int wrapper_portal_allow(struct active *, int);
+PRIVATE int portal_header_config(struct mbuffer *, const struct active_config *);
+PRIVATE int portal_header_check(struct mbuffer *, const struct active_config *);
+PRIVATE int portal_source_check(struct mbuffer *, int);
+PRIVATE int portal_get_actid(int);
+PRIVATE int portal_get_portid(int);
 /**@}*/
 
 /*============================================================================*
@@ -80,7 +71,7 @@ int portal_get_portid(int);
 /**
  * @brief Initializes the mbuffers table lock.
  */
-void do_portal_table_init(void)
+PRIVATE void do_portal_table_init(void)
 {
 	/* Initializes the mbuffers. */
 	for (int i = 0; i < KPORTAL_MESSAGE_BUFFERS_MAX; ++i)
@@ -181,7 +172,7 @@ void do_portal_table_init(void)
  *
  * @returns Value return by portal_allow function.
  */
-int wrapper_portal_allow(struct active * act, int remote)
+PRIVATE int wrapper_portal_allow(struct active * act, int remote)
 {
 	if (active_is_allowed(act))
 	{
@@ -206,7 +197,7 @@ int wrapper_portal_allow(struct active * act, int remote)
  *
  * @returns Zero is returned.
  */
-int portal_header_config(struct mbuffer * buf, const struct active_config * config)
+PRIVATE int portal_header_config(struct mbuffer * buf, const struct active_config * config)
 {
 	buf->message.header.src  = config->local_addr;
 	buf->message.header.dest = config->remote_addr;
@@ -227,11 +218,12 @@ int portal_header_config(struct mbuffer * buf, const struct active_config * conf
  *
  * @returns Non-zero if the mbuffer is destinate to current configuration.
  */
-int portal_header_check(struct mbuffer * buf, const struct active_config * config)
+PRIVATE int portal_header_check(struct mbuffer * buf, const struct active_config * config)
 {
-	return ((buf->message.header.dest == config->local_addr) &&
-	        (portal_source_check(buf, config->remote_addr))
-	       );
+	return (
+		(buf->message.header.dest == config->local_addr) &&
+		(portal_source_check(buf, config->remote_addr))
+	);
 }
 
 /*============================================================================*
@@ -247,7 +239,7 @@ int portal_header_check(struct mbuffer * buf, const struct active_config * confi
  * @returns Non-zero if the mbuffer src matches the current configuration, and
  * zero otherwise.
  */
-int portal_source_check(struct mbuffer * buf, int src_mask)
+PRIVATE int portal_source_check(struct mbuffer * buf, int src_mask)
 {
 	int msg_source;
 	int mask_node;
@@ -273,26 +265,6 @@ int portal_source_check(struct mbuffer * buf, int src_mask)
 }
 
 /*============================================================================*
- * portal_laddress_calc()                                                     *
- *============================================================================*/
-
-/**
- * @brief Calculates the laddress of a communicator.
- *
- * @param fd   Node fd.
- * @param port Port number.
- *
- * @returns Returns the composed laddress.
- *
- * @note The correctness of parameters is responsibility of the caller. This
- * function only applies the parameters to the calculation formula.
- */
-int portal_laddress_calc(int fd, int port)
-{
-	return (ACTIVE_LADDRESS_COMPOSE(fd, port, KPORTAL_PORT_NR));
-}
-
-/*============================================================================*
  * portal_get_actid()                                                         *
  *============================================================================*/
 
@@ -304,7 +276,7 @@ int portal_laddress_calc(int fd, int port)
  * @returns Upon successful completion, zero is returned. Upon failure, a
  * negative error code is returned instead.
  */
-int portal_get_actid(int id)
+PRIVATE int portal_get_actid(int id)
 {
 	return ((id < 0) ? (id) : (id / (KPORTAL_PORT_NR + 1)));
 }
@@ -321,9 +293,29 @@ int portal_get_actid(int id)
  * @returns Upon successful completion, zero is returned. Upon failure, a
  * negative error code is returned instead.
  */
-int portal_get_portid(int id)
+PRIVATE int portal_get_portid(int id)
 {
 	return ((id < 0) ? (id) : (id % (KPORTAL_PORT_NR + 1)));
+}
+
+/*============================================================================*
+ * portal_laddress_calc()                                                     *
+ *============================================================================*/
+
+/**
+ * @brief Calculates the laddress of a communicator.
+ *
+ * @param fd   Node fd.
+ * @param port Port number.
+ *
+ * @returns Returns the composed laddress.
+ *
+ * @note The correctness of parameters is responsibility of the caller. This
+ * function only applies the parameters to the calculation formula.
+ */
+PUBLIC int portal_laddress_calc(int fd, int port)
+{
+	return (ACTIVE_LADDRESS_COMPOSE(fd, port, KPORTAL_PORT_NR));
 }
 
 /*============================================================================*

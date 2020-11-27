@@ -33,11 +33,9 @@
 #ifndef NANVIX_KPORTAL_H_
 #define NANVIX_KPORTAL_H_
 
-	#include <nanvix/hal.h>
-	#include <nanvix/const.h>
-	#include <nanvix/hlib.h>
-	#include <posix/stdarg.h>
-	#include <posix/errno.h>
+	#include <nanvix/kernel/portal.h>
+
+	#include "active.h"
 
 #if __TARGET_HAS_PORTAL
 

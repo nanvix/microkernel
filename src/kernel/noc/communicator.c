@@ -22,16 +22,6 @@
  * SOFTWARE.
  */
 
-/* Must come first. */
-#define __NEED_RESOURCE
-
-#include <nanvix/hal.h>
-#include <nanvix/hlib.h>
-#include <nanvix/const.h>
-#include <posix/errno.h>
-#include <posix/stdarg.h>
-#include <nanvix/kernel/mm.h>
-
 #include "communicator.h"
 
 #if (__TARGET_HAS_MAILBOX || __TARGET_HAS_PORTAL)
