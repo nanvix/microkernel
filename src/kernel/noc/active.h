@@ -32,7 +32,12 @@
 #ifndef NANVIX_NOC_ACTIVE_H_
 #define NANVIX_NOC_ACTIVE_H_
 
+	/* Must come first. */
+	#define __NEED_RESOURCE
+
 	#include <nanvix/hal.h>
+	#include <nanvix/hal/resource.h>
+	#include <nanvix/kernel/thread.h>
 	#include <nanvix/hlib.h>
 	#include <nanvix/const.h>
 	#include <posix/errno.h>
@@ -211,6 +216,13 @@
 		/**@{*/
 		struct requests_fifo requests;         /**< Ring buffer of awrite requests.             */
 		spinlock_t lock;                       /**< Protection.                                 */
+		/**@}*/
+
+		/**
+		 * @name Wait/Wakeup controllers.
+		 */
+		/**@{*/
+		struct semaphore waiting;              /**< Thread queue waiting for a communication.   */
 		/**@}*/
 
 		/**
