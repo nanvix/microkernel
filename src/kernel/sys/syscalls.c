@@ -39,14 +39,15 @@ PRIVATE struct semaphore syssem;
  */
 PRIVATE struct sysboard
 {
-	word_t arg0;             /**< First argument of system call.   */
-	word_t arg1;             /**< Second argument of system call.  */
-	word_t arg2;             /**< Third argument of system call.   */
-	word_t arg3;             /**< Fourth argument of system call.  */
-	word_t arg4;             /**< Fifth argument of system call.   */
-	word_t syscall_nr;       /**< System call number.              */
-	word_t ret;              /**< Return value of system call.     */
-	struct semaphore syssem; /**< Semaphore.                       */
+	word_t arg0;             /**< First argument of system call.           */
+	word_t arg1;             /**< Second argument of system call.          */
+	word_t arg2;             /**< Third argument of system call.           */
+	word_t arg3;             /**< Fourth argument of system call.          */
+	word_t arg4;             /**< Fifth argument of system call.           */
+	word_t syscall_nr;       /**< System call number.                      */
+	word_t ret;              /**< Return value of system call.             */
+	struct semaphore syssem; /**< Semaphore to wait a syscall to complete. */
+	struct mutex sysmutex;   /**< Reserve the sysboard by a thread.        */
 	int pending;
 } ALIGN(CACHE_LINE_SIZE) sysboard[CORES_NUM];
 
@@ -500,32 +501,38 @@ PUBLIC int do_kcall(
 
 			coreid = core_get_id();
 
-			/* Fillup system call board. */
-			sysboard[coreid].arg0 = arg0;
-			sysboard[coreid].arg1 = arg1;
-			sysboard[coreid].arg2 = arg2;
-			sysboard[coreid].arg3 = arg3;
-			sysboard[coreid].arg4 = arg4;
-			sysboard[coreid].syscall_nr = syscall_nr;
-			sysboard[coreid].pending = 1;
+			/* Reserve sysboard. */
+			mutex_lock(&sysboard[coreid].sysmutex);
 
-			semaphore_up(&syssem);
-			semaphore_down(&sysboard[coreid].syssem);
+				/* Fillup system call board. */
+				sysboard[coreid].arg0 = arg0;
+				sysboard[coreid].arg1 = arg1;
+				sysboard[coreid].arg2 = arg2;
+				sysboard[coreid].arg3 = arg3;
+				sysboard[coreid].arg4 = arg4;
+				sysboard[coreid].syscall_nr = syscall_nr;
+				sysboard[coreid].pending = 1;
 
-			ret = sysboard[coreid].ret;
+				semaphore_up(&syssem);
+				semaphore_down(&sysboard[coreid].syssem);
 
-			switch (syscall_nr)
-			{
-				case NR_upage_alloc:
-				case NR_upage_free:
-				case NR_upage_map:
-				case NR_upage_unmap:
-				case NR_upage_link:
-					upage_inval(arg0);
+				ret = sysboard[coreid].ret;
 
-				default:
-					break;
-			}
+				switch (syscall_nr)
+				{
+					case NR_upage_alloc:
+					case NR_upage_free:
+					case NR_upage_map:
+					case NR_upage_unmap:
+					case NR_upage_link:
+						upage_inval(arg0);
+
+					default:
+						break;
+				}
+
+			/* Release sysboard. */
+			mutex_unlock(&sysboard[coreid].sysmutex);
 		} break;
 	}
 
@@ -544,5 +551,6 @@ PUBLIC void syscall_init(void)
 		sysboard[coreid].syscall_nr = -1;
 		sysboard[coreid].pending    =  0;
 		semaphore_init(&sysboard[coreid].syssem, 0);
+		mutex_init(&sysboard[coreid].sysmutex);
 	}
 }
