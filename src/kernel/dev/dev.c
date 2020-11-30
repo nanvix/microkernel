@@ -23,6 +23,7 @@
  */
 
 #include <nanvix/hal.h>
+#include <nanvix/kernel/thread.h>
 #include <nanvix/const.h>
 
 /**
@@ -58,6 +59,10 @@ PRIVATE void do_timer(int num)
 		ticks++;
 		lwip_now++;
 		dcache_invalidate();
+
+#if CORE_SUPPORTS_MULTITHREADING
+		thread_manager();
+#endif
 	}
 }
 

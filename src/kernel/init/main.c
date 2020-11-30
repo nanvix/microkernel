@@ -92,14 +92,14 @@ PUBLIC void kmain(int argc, const char *argv[])
 	syscall_init();
 	kevent_init();
 
-	kprintf("[kernel][dev] enabling hardware interrupts");
-	interrupts_enable();
-
 #if __NANVIX_HAS_NETWORK
 	network_setup();
 #endif
 
 	thread_init();
+
+	kprintf("[kernel][dev] enabling hardware interrupts");
+	interrupts_enable();
 
 #if (CLUSTER_IS_MULTICORE)
 	thread_create(&tid, init, NULL);
