@@ -38,6 +38,7 @@ EXTENSION PUBLIC struct thread threads[KTHREAD_MAX] = {
 		.tid      = KTHREAD_MASTER_TID,
 		.coreid   = 0,
 		.state    = THREAD_RUNNING,
+		.age      = 0ULL,
 		.arg      = NULL,
 		.start    = (void *) kmain,
 		.ctx      = NULL,
@@ -446,6 +447,7 @@ PUBLIC void thread_init(void)
 		threads[i].tid      = KTHREAD_NULL_TID;
 		threads[i].coreid   = -1;
 		threads[i].state    = THREAD_NOT_STARTED;
+		threads[i].age      = 0ULL;
 		threads[i].arg      = NULL;
 		threads[i].start    = NULL;
 		threads[i].ctx      = NULL;

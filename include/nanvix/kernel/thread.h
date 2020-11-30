@@ -82,6 +82,11 @@
 	#define KTHREAD_MAX (SYS_THREAD_MAX + THREAD_MAX)
 
 	/**
+	 * @brief Number of clock cycles per thread.
+	 */
+	#define THREAD_QUANTUM (128)
+
+	/**
 	 * @name Thread States
 	 */
 	/**@{*/
@@ -112,15 +117,15 @@
 		/*
 		 * XXX: Don't Touch! This Must Come First!
 		 */
-		struct resource resource; /**< Generic resource information.   */
+		struct resource resource; /**< Generic resource information. */
 
-		int tid;                  /**< Thread ID.                      */
-		int coreid;               /**< Core ID.                        */
-		short state;              /**< State.                          */
-		short holds;              /**< Number of recursive locks (tm). */
-		void *arg;                /**< Argument.                       */
-		void *(*start)(void*);    /**< Starting routine.               */
-		struct context *ctx;      /**< Preempted context.              */
+		int tid;                  /**< Thread ID.                    */
+		int coreid;               /**< Core ID.                      */
+		short state;              /**< State.                        */
+		uint64_t age;             /**< Age.                          */
+		void *arg;                /**< Argument.                     */
+		void *(*start)(void*);    /**< Starting routine.             */
+		struct context *ctx;      /**< Preempted context.            */
 	};
 
 	/**
@@ -254,6 +259,11 @@
 	 * @brief Release the core to another thread.
 	 */
 	EXTERN int thread_yield(void);
+
+	/**
+	 * @brief Manage the thread system.
+	 */
+	EXTERN void thread_manager(void);
 
 	/**
 	 * @brief Initialize thread system.

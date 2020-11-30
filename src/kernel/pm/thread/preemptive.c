@@ -152,19 +152,20 @@ PRIVATE int thread_switch_to(struct context ** previous, struct context ** next)
 /**
 * @brief Insert a new thread into a schedule queue.
 *
-* @param new_thread New thread to insert into @idle queue.
+* @param t New thread to insert into @idle queue.
 */
-PUBLIC void thread_schedule(struct thread * new_thread)
+PUBLIC void thread_schedule(struct thread * t)
 {
 	/* Valid user thread. */
-	KASSERT(WITHIN(new_thread, &user_threads[0], &user_threads[THREAD_MAX]));
+	KASSERT(WITHIN(t, &user_threads[0], &user_threads[THREAD_MAX]));
 
 	/* Reconfigure the thread. */
-	new_thread->coreid = -1;
-	new_thread->state  = THREAD_READY;
+	t->age    = 0ULL;
+	t->state  = THREAD_READY;
+	t->coreid = -1;
 
 	/* Enqueue new thread. */
-	resource_enqueue(&schedules, &new_thread->resource);
+	resource_enqueue(&schedules, &t->resource);
 }
 
 /*============================================================================*
@@ -177,7 +178,7 @@ PUBLIC void thread_schedule(struct thread * new_thread)
 * @returns Valid thread pointer if there is user threads ready to be scheduled,
 * NULL otherwise.
 */
-struct thread * thread_schedule_next(void)
+PRIVATE struct thread * thread_schedule_next(void)
 {
 	return ((struct thread *) (resource_dequeue(&schedules)));
 }
@@ -298,6 +299,98 @@ PRIVATE void thread_handler(int evnum)
 	KASSERT(evnum == KEVENT_SCHED);
 
 	thread_yield();
+}
+
+/*============================================================================*
+ * thread_manager()                                                           *
+ *============================================================================*/
+
+/**
+ * @brief Node to order threads.
+ */
+struct tnode {
+	struct resource resource;
+	struct thread * thread;
+};
+
+/**
+ * @brief Insert ordered on an arrangement.
+ */
+PRIVATE int thread_compare_age(struct resource * a, struct resource * b)
+{
+	uint64_t ta, tb;
+
+	KASSERT(a && b);
+
+	ta = ((struct tnode *) a)->thread->age;
+	tb = ((struct tnode *) b)->thread->age;
+
+	if (ta == tb)
+		return (0);
+
+	return (ta < tb) ? (-1) : (1);
+}
+
+/**
+ * @brief Manage the thread system.
+ */
+PUBLIC void thread_manager(void)
+{
+	int coreid;
+	int nodeid;
+	struct tnode * older;
+	struct tnode nodes[CORES_NUM];
+	struct resource_arrangement olders;
+
+	/* Initialize priority queue. */
+	olders = RESOURCE_ARRANGEMENT_INITIALIZER;
+	nodeid = 0;
+
+	spinlock_lock(&lock_tm);
+
+		/* Find the older thread per coreid. */
+		for (int i = 1; i < CORES_NUM; ++i)
+		{
+			/* Update thread age. */
+			curr_threads[i]->age++;
+
+			/* Young thread. */
+			if (curr_threads[i]->age < THREAD_QUANTUM)
+				continue;
+
+			/* Configure the node. */
+			nodes[nodeid].resource = RESOURCE_INITIALIZER;
+			nodes[nodeid].thread   = curr_threads[i];
+
+			/* Insert ordered. */
+			KASSERT(resource_insert_ordered(
+				&olders,
+				&nodes[nodeid].resource,
+				thread_compare_age
+			) >= 0);
+
+			/* Next node. */
+			nodeid++;
+		}
+
+		/* Get older thread. */
+		while ((older = (struct tnode *) resource_dequeue(&olders)) != NULL)
+		{
+			coreid = thread_get_coreid(older->thread);
+
+			/* Has any thread waiting? */
+			if (schedules[coreid].size)
+			{
+				/* Notify scheduling event. */
+				KASSERT(kevent_notify(KEVENT_SCHED, coreid) == 0);
+
+				/* Schedule only one thread per management. */
+				break;
+			}
+		}
+
+	/* Release the thread system. */
+	spinlock_unlock(&lock_tm);
 }
 
 /*============================================================================*
@@ -574,6 +667,7 @@ PUBLIC void __thread_init(void)
 		/* Initialize thread structure. */
 		idle->coreid        = coreid;
 		idle->state         = THREAD_RUNNING;
+		idle->age           = THREAD_QUANTUM;
 		idle->arg           = NULL;
 		idle->start         = (void *(*)(void*)) thread_idle;
 		idle->resource.next = NULL;

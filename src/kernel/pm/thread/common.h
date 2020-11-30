@@ -115,7 +115,7 @@
 	}
 
 	/**
-	 * @brief Unlock thread system.
+	 * @brief Lock thread system.
 	 */
 	static void thread_unlock_tm(struct thread * t, struct section_guard * guard)
 	{

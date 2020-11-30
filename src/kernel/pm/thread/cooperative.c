@@ -138,6 +138,7 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 		new_thread->state = THREAD_RUNNING;
 		new_thread->arg   = arg;
 		new_thread->start = start;
+		new_thread->age   = 0ULL;
 
 	thread_unlock_tm(&guard);
 
