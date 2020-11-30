@@ -34,16 +34,7 @@ spinlock_t lock = SPINLOCK_UNLOCKED;
 /**
  * brief Sleeping queues.
  */
-EXTENSION PRIVATE struct
-{
-	int tid;
-	struct condvar cond;
-} queues[KTHREAD_MAX] = {
-	[0 ... (KTHREAD_MAX - 1)] = {
-		.tid  = KTHREAD_NULL_TID,
-		.cond = COND_STATIC_INITIALIZER
-	},
-};
+PRIVATE struct condvar sleeping = COND_STATIC_INITIALIZER;
 
 /*============================================================================*
  * kernel_sleep()                                                             *
@@ -55,18 +46,8 @@ EXTENSION PRIVATE struct
  */
 PUBLIC int kernel_sleep(void)
 {
-	int coreid;
-	struct thread *t;
-
-	t = thread_get_curr();
-	coreid = thread_get_coreid(t);
-
 	spinlock_lock(&lock);
-
-		queues[coreid].tid = thread_get_id(t);
-		cond_wait(&queues[coreid].cond, &lock);
-		queues[coreid].tid = -1;
-
+		cond_wait(&sleeping, &lock);
 	spinlock_unlock(&lock);
 
 	return (0);
@@ -80,29 +61,15 @@ PUBLIC int kernel_sleep(void)
  */
 PUBLIC int kernel_wakeup(int tid)
 {
-	int ret = 0;
+	int ret;
 
 	/* Invalid thread ID. */
 	if (tid < 0)
 		return (-EINVAL);
 
+	/* Search for sleeping thread. */
 	spinlock_lock(&lock);
-
-		/* Search for sleeping thread. */
-		for (int i = 0; i < KTHREAD_MAX; i++)
-		{
-			/* Found. */
-			if (tid == queues[i].tid)
-			{
-				cond_broadcast(&queues[i].cond);
-				goto done;
-			}
-		}
-
-		ret = -EAGAIN;
-
-done:
-
+		ret = cond_unicast(&sleeping, tid);
 	spinlock_unlock(&lock);
 
 	return (ret);
