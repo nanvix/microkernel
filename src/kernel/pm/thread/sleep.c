@@ -22,11 +22,11 @@
  * SOFTWARE.
  */
 
-#include <nanvix/hal.h>
-#include <nanvix/kernel/thread.h>
-#include <nanvix/const.h>
-
 #include "common.h"
+
+/*============================================================================*
+ * Sleep/Wake up functions                                                    *
+ *============================================================================*/
 
 /*============================================================================*
  * thread_asleep()                                                            *
@@ -39,17 +39,44 @@
  * thread invokes thread_wakeup() on it. When the thread wakes up, the
  * spinlock @p lock is re-acquired.
  *
- * @note This function is NOT thread safe.
- *
  * @see thread_wakeup().
  *
- * @author Pedro Henrique Penna
+ * @author João Vicente Souto
  */
-PUBLIC void thread_asleep(spinlock_t *lock)
+PUBLIC void thread_asleep(
+	struct resource_arrangement * queue,
+	spinlock_t * queue_lock,
+	spinlock_t * user_lock
+)
 {
-	spinlock_unlock(lock);
+	struct thread * curr;
+
+	spinlock_lock(queue_lock);
+
+		/* Asleep was called from outside the thread system. */
+		if (&lock_tm != user_lock)
+			spinlock_lock(&lock_tm);
+
+			/* Stop current thread. */
+			curr        = thread_get_curr();
+			curr->state = THREAD_SLEEPING;
+
+			/* Sleeps on queue. */
+			resource_enqueue(queue, &curr->resource);
+
+		if (&lock_tm != user_lock)
+			spinlock_unlock(&lock_tm);
+
+	spinlock_unlock(queue_lock);
+
+	/* Release user critical region. */
+	spinlock_unlock(user_lock);
+
+		/* Waits wake up. */
 		core_sleep();
-	spinlock_lock(lock);
+
+	/* Lock the user critical region. */
+	spinlock_lock(user_lock);
 }
 
 /*============================================================================*
@@ -57,16 +84,17 @@ PUBLIC void thread_asleep(spinlock_t *lock)
  *============================================================================*/
 
 /**
- * The thread_wakeup() function wakes up the thread pointed to by @p
- * thread.
+ * The thread_wakeup() function wakes up the thread pointed to by @t
+ * thread. The @t thread will be inserted into scheduler queue.
  *
- * @note This function is NOT thread safe.
+ * @param t Thread to wakeup.
  *
  * @see thread_asleep().
  *
- * @author Pedro Henrique Penna
+ * @author João Vicente Souto
  */
 PUBLIC void thread_wakeup(struct thread *t)
 {
+	/* Wake up thread. */
 	core_wakeup(thread_get_coreid(t));
 }
