@@ -173,8 +173,9 @@ PRIVATE void thread_schedule(struct thread * new_thread)
 	/* Valid user thread. */
 	KASSERT(WITHIN(new_thread, &user_threads[0], &user_threads[THREAD_MAX]));
 
-	/* Reset coreid. */
+	/* Reconfigure the thread. */
 	new_thread->coreid = -1;
+	new_thread->state  = THREAD_READY;
 
 	/* Enqueue new thread. */
 	resource_enqueue(&schedules, &new_thread->resource);
