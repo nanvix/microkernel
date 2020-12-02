@@ -22,11 +22,6 @@
  * SOFTWARE.
  */
 
-#include <nanvix/kernel/thread.h>
-#include <nanvix/kernel/mm.h>
-#include <nanvix/const.h>
-#include <posix/errno.h>
-
 #include "common.h"
 
 #if CLUSTER_IS_MULTICORE && CORE_SUPPORTS_MULTITHREADING

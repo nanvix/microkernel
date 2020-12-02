@@ -22,9 +22,6 @@
  * SOFTWARE.
  */
 
-#include <nanvix/kernel/thread.h>
-#include <nanvix/kernel/mm.h>
-
 #include "common.h"
 
 /*
