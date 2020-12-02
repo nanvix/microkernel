@@ -430,6 +430,85 @@
 	 */
 	EXTERN void semaphore_up(struct semaphore *sem);
 
+/*============================================================================*
+ *                               Mutex Facility                               *
+ *============================================================================*/
+
+	/**
+	 * @brief Mutex
+	 */
+	struct mutex
+	{
+		int curr_ticket;     /**< Current ticket.                 */
+		int next_ticket;     /**< Next ticket available.          */
+		int curr_owner;      /**< Thread ID that holds the mutex. */
+		spinlock_t lock;     /**< Mutex lock.                     */
+		struct condvar cond; /**< Condition variable.             */
+	};
+
+	/**
+	 * @brief Static initializer for mutex.
+	 *
+	 * The @p MUTEX_STATIC_INITIALIZER macro statically initializes
+	 * the fields of a mutex.
+	 */
+	#define MUTEX_STATIC_INITIALIZER            \
+	{                                           \
+		.curr_ticket = 0,                       \
+		.next_ticket = 0,                       \
+		.curr_owner  = KTHREAD_NULL_TID,        \
+		.lock        = SPINLOCK_UNLOCKED,       \
+		.cond        = COND_STATIC_INITIALIZER, \
+	}
+
+	/**
+	 * @brief Initializer for mutex.
+	 *
+	 * The @p MUTEX_INITIALIZER macro initializes the fields of
+	 * a mutex.
+	 */
+	#define MUTEX_INITIALIZER             \
+	(struct mutex){                       \
+		.curr_ticket = 0,                 \
+		.next_ticket = 0,                 \
+		.curr_owner  = KTHREAD_NULL_TID,  \
+		.lock        = SPINLOCK_UNLOCKED, \
+		.cond        = COND_INITIALIZER,  \
+	}
+
+	/**
+	 * @brief Initializes a mutex.
+	 *
+	 * The mutex_init() function dynamically initializes the
+	 * fields of the mutex pointed to by @p m.
+	 *
+	 * @param m Target mutex.
+	 */
+	static inline void mutex_init(struct mutex *m)
+	{
+		KASSERT(m != NULL);
+
+		m->curr_ticket = 0;
+		m->next_ticket = 0;
+		m->curr_owner  = KTHREAD_NULL_TID;
+		spinlock_init(&m->lock);
+		cond_init(&m->cond);
+	}
+
+	/**
+	 * @brief Performs a lock operation in a mutex.
+	 *
+	 * @param m Target mutex.
+	 */
+	EXTERN void mutex_lock(struct mutex *m);
+
+	/**
+	 * @brief Performs an unlock operation in a mutex.
+	 *
+	 * @param m target mutex.
+	 */
+	EXTERN void mutex_unlock(struct mutex *m);
+
 #endif /* NANVIX_THREAD_H_ */
 
 /**@}*/
