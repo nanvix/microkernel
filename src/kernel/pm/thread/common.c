@@ -326,7 +326,12 @@ PUBLIC NORETURN void thread_start(void)
 
 #if CORE_SUPPORTS_MULTITHREADING
 
-	spinlock_lock(&lock_tm);
+	struct section_guard guard; /* Section guard.    */
+
+	/* Prevent this call be preempted by any maskable interrupt. */
+	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
+
+	thread_lock_tm(&guard);
 
 		/* Verifies if the next thread is zombie */
 		struct thread * zombie = (struct thread *) curr->resource.next;
@@ -336,7 +341,7 @@ PUBLIC NORETURN void thread_start(void)
 
 		curr->resource.next = NULL;
 
-	spinlock_unlock(&lock_tm);
+	thread_unlock_tm(&guard);
 
 #endif
 
@@ -369,13 +374,17 @@ PUBLIC int thread_join(int tid, void **retval)
 {
 	int ret;
 	struct thread *t;
+	struct section_guard guard; /* Section guard.    */
 
 	/* Sanity check. */
 	KASSERT(tid > KTHREAD_NULL_TID);
 	KASSERT(tid != thread_get_curr_id());
 	KASSERT(tid != KTHREAD_MASTER_TID);
 
-	spinlock_lock(&lock_tm);
+	/* Prevent this call be preempted by any maskable interrupt. */
+	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
+
+	thread_lock_tm(&guard);
 
 		/* Wait for thread termination. */
 		if ((t = thread_get(tid)) != NULL)
@@ -404,7 +413,7 @@ PUBLIC int thread_join(int tid, void **retval)
 		if (ret == 0)
 			thread_search_retval(retval, tid);
 
-	spinlock_unlock(&lock_tm);
+	thread_unlock_tm(&guard);
 
 	return (ret);
 }

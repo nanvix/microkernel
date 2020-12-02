@@ -112,14 +112,15 @@
 		/*
 		 * XXX: Don't Touch! This Must Come First!
 		 */
-		struct resource resource; /**< Generic resource information. */
+		struct resource resource; /**< Generic resource information.   */
 
-		int tid;                  /**< Thread ID.                    */
-		int coreid;               /**< Core ID.                      */
-		int state;                /**< State.                        */
-		void *arg;                /**< Argument.                     */
-		void *(*start)(void*);    /**< Starting routine.             */
-		struct context *ctx;      /**< Preempted context.            */
+		int tid;                  /**< Thread ID.                      */
+		int coreid;               /**< Core ID.                        */
+		short state;              /**< State.                          */
+		short holds;              /**< Number of recursive locks (tm). */
+		void *arg;                /**< Argument.                       */
+		void *(*start)(void*);    /**< Starting routine.               */
+		struct context *ctx;      /**< Preempted context.              */
 	};
 
 	/**

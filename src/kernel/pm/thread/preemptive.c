@@ -163,7 +163,7 @@ PRIVATE int thread_switch_to(struct context ** previous, struct context ** next)
 *
 * @param new_thread New thread to insert into @idle queue.
 */
-PRIVATE void thread_schedule(struct thread * new_thread)
+PRIVATE void thread_schedule(struct thread * new_thread, struct section_guard * guard)
 {
 	/* Valid user thread. */
 	KASSERT(WITHIN(new_thread, &user_threads[0], &user_threads[THREAD_MAX]));
@@ -176,9 +176,9 @@ PRIVATE void thread_schedule(struct thread * new_thread)
 	resource_enqueue(&schedules, &new_thread->resource);
 
 	/* Notifies that is a new thread available. */
-	spinlock_unlock(&lock_tm);
+	thread_unlock_tm(guard);
 		semaphore_up(&idle_sem);
-	spinlock_lock(&lock_tm);
+	thread_lock_tm(guard);
 }
 
 /*============================================================================*
@@ -207,9 +207,10 @@ struct thread * thread_schedule_next(void)
 */
 PUBLIC int thread_yield(void)
 {
-	struct thread * idle; /* Schedule queue. */
-	struct thread * curr; /* Current Thread. */
-	struct thread * next; /* Next Thread.    */
+	struct thread * idle;       /* Schedule queue. */
+	struct thread * curr;       /* Current Thread. */
+	struct thread * next;       /* Next Thread.    */
+	struct section_guard guard; /* Section guard.  */
 
 	curr = thread_get_curr();
 
@@ -219,7 +220,10 @@ PUBLIC int thread_yield(void)
 
 	idle = IDLE_THREAD(thread_get_coreid(curr));
 
-	spinlock_lock(&lock_tm);
+	/* Prevent this call be preempted by any maskable interrupt. */
+	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
+
+	thread_lock_tm(&guard);
 
 	/**
 	 * Gets next thread.
@@ -235,7 +239,7 @@ PUBLIC int thread_yield(void)
 
 				/* Make user thread schedulable. */
 				if (curr != idle)
-					thread_schedule(curr);
+					thread_schedule(curr, &guard);
 			}
 		}
 
@@ -269,7 +273,7 @@ PUBLIC int thread_yield(void)
 		next->state                = THREAD_RUNNING;
 		curr_threads[next->coreid] = next;
 
-	spinlock_unlock(&lock_tm);
+	thread_unlock_tm(&guard);
 
 	/* Current context must be NULL before switch to another. */
 	KASSERT(curr->ctx == NULL);
@@ -281,7 +285,7 @@ PUBLIC int thread_yield(void)
 	/* Restore context function must clean ctx variable. */
 	KASSERT(curr->ctx == NULL);
 
-	spinlock_lock(&lock_tm);
+	thread_lock_tm(&guard);
 
 		/* Verifies if the next thread is zombie */
 		struct thread * zombie = (struct thread *) curr->resource.next;
@@ -291,7 +295,7 @@ PUBLIC int thread_yield(void)
 
 		curr->resource.next = NULL;
 
-	spinlock_unlock(&lock_tm);
+	thread_unlock_tm(&guard);
 
 	return (0);
 }
@@ -314,6 +318,7 @@ PUBLIC int thread_yield(void)
 PRIVATE NORETURN void thread_idle(void)
 {
 	struct thread * idle; /* Idle Thread.    */
+	struct section_guard guard; /* Section guard.    */
 
 	idle = thread_get_curr();
 
@@ -349,13 +354,15 @@ PRIVATE NORETURN void thread_idle(void)
 		KASSERT(thread_yield() == 0);
 	}
 
+	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
+
 	/* Indicates that the underlying core will be reset. */
 	KASSERT(core_release() == 0);
 
-		spinlock_lock(&lock_tm);
+		thread_lock_tm(&guard);
 			idle->state = THREAD_ZOMBIE;
 			cond_broadcast(&joincond[KERNEL_THREAD_ID(idle)]);
-		spinlock_unlock(&lock_tm);
+		thread_unlock_tm(&guard);
 
 	/* No rollback after this point. */
 	/* Resets the underlying core. */
@@ -390,6 +397,7 @@ PRIVATE NORETURN void thread_idle(void)
 PUBLIC NORETURN void thread_exit(void *retval)
 {
 	struct thread * curr;
+	struct section_guard guard; /* Section guard.    */
 
 	/* Gets current thread information. */
 	curr = thread_get_curr();
@@ -398,8 +406,11 @@ PUBLIC NORETURN void thread_exit(void *retval)
 	/* @TODO Do we need sure that only user thread will call thread_exit? */
 	KASSERT(WITHIN(curr, &user_threads[0], &user_threads[THREAD_MAX]));
 
+	/* Prevent this call be preempted by any maskable interrupt. */
+	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
+
 	/* Notifies thread exit. */
-	spinlock_lock(&lock_tm);
+	thread_lock_tm(&guard);
 
 		/* Saves the retval of current thread. */
 		thread_save_retval(retval, curr);
@@ -413,10 +424,10 @@ PUBLIC NORETURN void thread_exit(void *retval)
 		 */
 		curr->state = THREAD_TERMINATED;
 
-		/* Notify waiting threads. */
+		/* Notifies thread exit. */
 		cond_broadcast(&joincond[KERNEL_THREAD_ID(curr)]);
 
-	spinlock_unlock(&lock_tm);
+	thread_unlock_tm(&guard);
 
 	/* Switch to another thread. */
 	thread_yield();
@@ -453,11 +464,15 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 	struct stack * ustack;      /* User stack pointer.       */
 	struct stack * kstack;      /* Kernel stack pointer.     */
 	struct thread *new_thread;  /* New thread.               */
+	struct section_guard guard; /* Section guard.            */
 
 	/* Sanity check. */
 	KASSERT(start != NULL);
 
-	spinlock_lock(&lock_tm);
+	/* Prevent this call be preempted by any maskable interrupt. */
+	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
+
+	thread_lock_tm(&guard);
 
 		/* Allocate thread. */
 		new_thread = thread_alloc();
@@ -489,7 +504,6 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 		new_thread->tid   = _tid;
 		new_thread->arg   = arg;
 		new_thread->start = start;
-		//new_thread->coreid        = (utid % IDLE_THREAD_MAX) + 1;
 
 		/* Store reference to the stacks of the thread. */
 		ustacks[utid] = ustack;
@@ -499,9 +513,9 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 		KASSERT((new_thread->ctx = context_create(thread_start, ustack, kstack)) != NULL);
 
 		/* Puts thread in the schedule queue. */
-		thread_schedule(new_thread);
+		thread_schedule(new_thread, &guard);
 
-	spinlock_unlock(&lock_tm);
+	thread_unlock_tm(&guard);
 
 	/* Save thread ID. */
 	if (tid != NULL)
@@ -513,9 +527,10 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 	return (0);
 
 error1:
+		new_thread->state = THREAD_ZOMBIE;
 		thread_free(new_thread);
 error0:
-	spinlock_unlock(&lock_tm);
+	thread_unlock_tm(&guard);
 
 	return (-EAGAIN);
 }

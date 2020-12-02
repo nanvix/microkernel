@@ -51,26 +51,30 @@
 PUBLIC NORETURN void thread_exit(void *retval)
 {
 	int mycoreid;
-	struct thread *curr_thread;
+	struct thread * curr;
+	struct section_guard guard; /* Section guard.    */
+
+	/* Prevent this call be preempted by any maskable interrupt. */
+	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
 
 	/* Indicates that the underlying core will be reset. */
 	KASSERT(core_release() == 0);
 
-		curr_thread = thread_get_curr();
-		mycoreid = thread_get_coreid(curr_thread);
+		curr     = thread_get_curr();
+		mycoreid = thread_get_coreid(curr);
 
-		spinlock_lock(&lock_tm);
+		thread_lock_tm(&guard);
 
 			/* Saves the retval of current thread. */
-			thread_save_retval(retval, curr_thread);
+			thread_save_retval(retval, curr);
 
 			/* Release thread structure. */
-			thread_free(curr_thread);
+			thread_free(curr);
 
 			/* Notify waiting threads. */
 			cond_broadcast(&joincond[mycoreid]);
 
-		spinlock_unlock(&lock_tm);
+		thread_unlock_tm(&guard);
 
 	/* No rollback after this point. */
 	/* Resets the underlying core. */
@@ -103,22 +107,26 @@ PUBLIC NORETURN void thread_exit(void *retval)
  */
 PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 {
-	int ret;                   /* Return value.             */
-	int _tid;                  /* Unique thread identifier. */
-	struct thread *new_thread; /* New thread.               */
-	int ntrials = 0;           /* Trials realized.          */
+	int ret;                    /* Return value.             */
+	int _tid;                   /* Unique thread identifier. */
+	int ntrials = 0;            /* Trials realized.          */
+	struct thread *new_thread;  /* New thread.               */
+	struct section_guard guard; /* Section guard.            */
 
 	/* Sanity check. */
 	KASSERT(start != NULL);
 
-	spinlock_lock(&lock_tm);
+	/* Prevent this call be preempted by any maskable interrupt. */
+	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
+
+	thread_lock_tm(&guard);
 
 		/* Allocate thread. */
 		new_thread = thread_alloc();
 		if (new_thread == NULL)
 		{
 			kprintf("[pm] cannot create thread");
-			spinlock_unlock(&lock_tm);
+			thread_unlock_tm(&guard);
 			return (-EAGAIN);
 		}
 
@@ -131,7 +139,7 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 		new_thread->arg   = arg;
 		new_thread->start = start;
 
-	spinlock_unlock(&lock_tm);
+	thread_unlock_tm(&guard);
 
 	/* Save thread ID. */
 	if (tid != NULL)
@@ -158,9 +166,9 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 	/* Rollback. */
 	if (ret != 0)
 	{
-		spinlock_lock(&lock_tm);
+		thread_lock_tm(&guard);
 			thread_free(new_thread);
-		spinlock_unlock(&lock_tm);
+		thread_unlock_tm(&guard);
 	}
 
 	return (ret);

@@ -50,14 +50,15 @@ PUBLIC void thread_asleep(
 )
 {
 	struct thread * curr;
+	struct section_guard guard; /* Section guard. */
+
+	/* Prevent this call be preempted by any maskable interrupt. */
+	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
 
 	spinlock_lock(queue_lock);
 
 		/* Asleep was called from outside the thread system. */
-		if (&lock_tm != user_lock)
-		{
-			spinlock_lock(&lock_tm);
-		}
+		thread_lock_tm(&guard);
 
 			/* Stop current thread. */
 			curr        = thread_get_curr();
@@ -66,10 +67,7 @@ PUBLIC void thread_asleep(
 			/* Sleeps on queue. */
 			resource_enqueue(queue, &curr->resource);
 
-		if (&lock_tm != user_lock)
-		{
-			spinlock_unlock(&lock_tm);
-		}
+		thread_unlock_tm(&guard);
 
 	spinlock_unlock(queue_lock);
 

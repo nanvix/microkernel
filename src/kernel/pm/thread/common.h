@@ -25,6 +25,10 @@
 #ifndef KERNEL_THREAD_COMMON_H_
 #define KERNEL_THREAD_COMMON_H_
 
+	/* Must come first. */
+	#define __NEED_SECTION_GUARD
+
+	#include <nanvix/hal/section_guard.h>
 	#include <nanvix/kernel/thread.h>
 	#include <nanvix/kernel/mm.h>
 	#include <nanvix/const.h>
@@ -97,22 +101,29 @@
 	 */
 	EXTERN spinlock_t lock_tm;
 
-	/**
-	 * @brief Saves the retval of the leaving thread in the exit values array.
-	 *
-	 * @param retval return value of the target thread
-	 * @param leaving_thread theard of the retval we're saving
-	 */
-    EXTERN void thread_save_retval(void *retval, struct thread *curr);
+	/*============================================================================*
+	 * Protection                                                                 *
+	 *============================================================================*/
 
 	/**
-	 * @brief Searches the exit_values array for the target return value of
-	 * a thread.
-	 *
-	 * @param retval return value of the target thread
-	 * @param tid Thread's ID
+	 * @brief Lock thread system.
 	 */
-    EXTERN void thread_search_retval(void **retval, int tid);
+	static void thread_lock_tm(struct thread * t, struct section_guard * guard)
+	{
+		section_guard_entry(guard);
+	}
+
+	/**
+	 * @brief Unlock thread system.
+	 */
+	static void thread_unlock_tm(struct thread * t, struct section_guard * guard)
+	{
+		section_guard_exit(guard);
+	}
+
+	/*============================================================================*
+	 * Allocation/Release                                                         *
+	 *============================================================================*/
 
 	/**
 	 * @brief Allocates a thread.
@@ -155,7 +166,7 @@
 	EXTERN void __thread_free(struct thread *t);
 
 	/*============================================================================*
-	 * thread_start()                                                             *
+	 * User functions                                                             *
 	 *============================================================================*/
 
 	/**
@@ -170,6 +181,27 @@
 	 * @author Pedro Henrique Penna
 	 */
 	EXTERN NORETURN void thread_start(void);
+
+	/**
+	 * @brief Saves the retval of the leaving thread in the exit values array.
+	 *
+	 * @param retval return value of the target thread
+	 * @param leaving_thread theard of the retval we're saving
+	 */
+	EXTERN void thread_save_retval(void *retval, struct thread *curr);
+
+	/**
+	 * @brief Searches the exit_values array for the target return value of
+	 * a thread.
+	 *
+	 * @param retval return value of the target thread
+	 * @param tid Thread's ID
+	 */
+	EXTERN void thread_search_retval(void **retval, int tid);
+
+	/*============================================================================*
+	 * Initialization                                                             *
+	 *============================================================================*/
 
 	/**
 	 * @brief Initialize thread system.
