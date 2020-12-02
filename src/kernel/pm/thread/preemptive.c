@@ -85,7 +85,7 @@ PRIVATE struct thread * user_threads = (KTHREAD_MASTER + SYS_THREAD_MAX);
 /**
  * @brief Schedule queues.
  */
-PRIVATE struct resource_arrangement schedules[CORES_NUM];
+PRIVATE struct resource_arrangement schedules;
 
 /**
  * @brief Fence to synchronize the idle thread in the initialization.
@@ -177,7 +177,7 @@ PRIVATE void thread_schedule(struct thread * new_thread)
 	new_thread->coreid = -1;
 
 	/* Enqueue new thread. */
-	resource_enqueue(schedules, &new_thread->resource);
+	resource_enqueue(&schedules, &new_thread->resource);
 
 	/* Notifies that is a new thread available. */
 	semaphore_up(&idle_sem);
@@ -195,7 +195,7 @@ PRIVATE void thread_schedule(struct thread * new_thread)
 */
 struct thread * thread_schedule_next(void)
 {
-	return ((struct thread *) (resource_dequeue(schedules)));
+	return ((struct thread *) (resource_dequeue(&schedules)));
 }
 
 /*============================================================================*
@@ -545,8 +545,8 @@ PUBLIC void __thread_init(void)
 	KASSERT(THREAD_MAX == THREAD_MAX);
 	KASSERT(nthreads == 1);
 
-	for (int i = 0; i < CORES_NUM; i++)
-		schedules[i] = RESOURCE_ARRANGEMENT_INITIALIZER;
+	/* Initialize the schedule queue. */
+	schedules = RESOURCE_ARRANGEMENT_INITIALIZER;
 
 	/* Initialize the fence for idle threads. */
 	spinlock_init(&idle_fence);
