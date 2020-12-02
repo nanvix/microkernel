@@ -45,20 +45,11 @@
  */
 PUBLIC int cond_wait(struct condvar *cond, spinlock_t *lock)
 {
-	struct thread *curr_thread;
-
 	KASSERT(cond != NULL);
 	KASSERT(lock != NULL);
 
-	curr_thread = thread_get_curr();
-
-	/* Enqueue calling thread. */
-	spinlock_lock(&cond->lock);
-		resource_enqueue(&cond->queue, &curr_thread->resource);
-	spinlock_unlock(&cond->lock);
-
 	/* Put the calling thread to sleep. */
-	thread_asleep(lock);
+	thread_asleep(&cond->queue, &cond->lock, lock);
 
 	return (0);
 }

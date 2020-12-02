@@ -181,7 +181,9 @@ PRIVATE void thread_schedule(struct thread * new_thread)
 	resource_enqueue(&schedules, &new_thread->resource);
 
 	/* Notifies that is a new thread available. */
-	semaphore_up(&idle_sem);
+	spinlock_unlock(&lock_tm);
+		semaphore_up(&idle_sem);
+	spinlock_lock(&lock_tm);
 }
 
 /*============================================================================*

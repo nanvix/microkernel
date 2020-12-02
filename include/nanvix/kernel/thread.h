@@ -232,9 +232,15 @@
 	/**
 	 * @brief Atomically puts the calling thread to sleep.
 	 *
-	 * @param lock  Spinlock to release and acquire.
+	 * @param queue      Arrangement where the thread will be enqueued.
+	 * @param queue_lock Spinlock to protect the queue.
+	 * @param user_lock  Spinlock of the critical region of the user.
 	 */
-	EXTERN void thread_asleep(spinlock_t *lock);
+	EXTERN void thread_asleep(
+		struct resource_arrangement * queue,
+		spinlock_t * queue_lock,
+		spinlock_t * user_lock
+	);
 
 	/**
 	 * @brief Wakes up a thread.
