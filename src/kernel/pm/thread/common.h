@@ -26,6 +26,9 @@
 #define KERNEL_THREAD_COMMON_H_
 
 	#include <nanvix/kernel/thread.h>
+	#include <nanvix/kernel/mm.h>
+	#include <nanvix/const.h>
+	#include <posix/errno.h>
 
 	/**
 	 * @brief Number of thread_create trials.
