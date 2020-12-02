@@ -59,8 +59,8 @@
 	/**
  	* @brief Size of the buffer with exiting values.
  	*/
-	#define KTHREAD_EXIT_VALUE_NUM (3 * KTHREAD_MAX)
-	
+	#define KTHREAD_EXIT_VALUE_NUM (32)
+
 	/**
 	 * @brief Maximum number of user threads.
 	 */
@@ -86,7 +86,7 @@
 	 */
 	/**@{*/
 	#define THREAD_NOT_STARTED 0 /**< Not Started */
-	#define THREAD_STARTED     1 /**< Started     */
+	#define THREAD_READY       1 /**< Started     */
 	#define THREAD_RUNNING     2 /**< Running     */
 	#define THREAD_SLEEPING    3 /**< Sleeping    */
 	#define THREAD_STOPPED     4 /**< Stopped     */

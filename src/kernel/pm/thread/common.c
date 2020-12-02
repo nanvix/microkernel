@@ -81,7 +81,7 @@ PUBLIC spinlock_t lock_tm;
 /**
  * @brief Thread's exit value
  */
-EXTENSION PRIVATE struct exit_value
+PRIVATE struct exit_value
 {
 	int tid;
 	void * retval;
@@ -257,7 +257,7 @@ PUBLIC struct thread * thread_alloc(void)
 		}
 
 		/* Initializes chosen thread. */
-		threads[i].state    = THREAD_STARTED;
+		threads[i].state    = THREAD_READY;
 		threads[i].resource = RESOURCE_INITIALIZER;
 
 		return (&threads[i]);
