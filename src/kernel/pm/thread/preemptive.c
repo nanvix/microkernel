@@ -75,6 +75,40 @@ PUBLIC void __thread_free(struct thread *t)
 }
 
 /*============================================================================*
+ * thread_set_affinity()                                                      *
+ *============================================================================*/
+
+/**
+ * @brief Sets a new 
+ *
+ * @param new_affinity New affinity value.
+ *
+ * @returns Old affinity value.
+ *
+ * This function is thread-safe.
+ *
+ * @author João Vicente Souto
+ */
+PUBLIC int thread_set_affinity(struct thread * t, int new_affinity)
+{
+	int old_affinity;           /* Old affinity.   */
+	struct section_guard guard; /* Section guard.  */
+
+	/* Sanity check. */
+	KASSERT(KTHREAD_AFFINITY_IS_VALID(new_affinity));
+
+	/* Prevent this call be preempted by any maskable interrupt. */
+	section_guard_init(&guard, &lock_curr_tm, INTERRUPT_LEVEL_NONE);
+
+	section_guard_entry(&guard);
+		old_affinity = t->affinity;
+		t->affinity  = new_affinity;
+	section_guard_exit(&guard);
+
+	return (old_affinity);
+}
+
+/*============================================================================*
  * Scheduling functions                                                       *
  *============================================================================*/
 
@@ -116,14 +150,37 @@ PRIVATE void thread_switch_to(struct context ** previous, struct context ** next
  *============================================================================*/
 
 /**
-* @brief Gets the next user thread to be scheduled.
-*
-* @returns Valid thread pointer if there is user threads ready to be scheduled,
-* NULL otherwise.
-*/
+ * @brief Helper to store the desired affinity used by the thread_choose().
+ */
+PRIVATE int thread_desired_affinity;
+
+/**
+ * @brief Looks if the @p r thread has a similary to a desired affinity. In
+ * general, it will be used to select a thread that has an affinity to a specific
+ * core.
+ *
+ * @returns True if the thread has at least one bit similary with the desired
+ * affinity, false otherwise.
+ */
+PRIVATE bool thread_choose(struct resource * r)
+{
+	struct thread * t = (struct thread *) r;
+
+	return (KTHREAD_AFFINITY_MATCH(thread_desired_affinity, t->affinity) != 0);
+}
+
+/**
+ * @brief Gets the next user thread to be scheduled.
+ *
+ * @returns Valid thread pointer if there is user threads ready to be scheduled,
+ * NULL otherwise.
+ */
 PRIVATE struct thread * thread_schedule_next(void)
 {
-	return ((struct thread *) resource_dequeue(&scheduling));
+	/* Sets the desired affinity to the underlying core. */
+	thread_desired_affinity = KTHREAD_AFFINITY_FIXED(core_get_id());
+
+	return ((struct thread *) resource_remove_verify(&scheduling, thread_choose));
 }
 
 /*============================================================================*
@@ -242,6 +299,7 @@ PUBLIC void __thread_prolog(struct thread * curr)
 */
 PUBLIC int thread_yield(void)
 {
+	int coreid;                 /* Core ID.        */
 	struct thread * idle;       /* Schedule queue. */
 	struct thread * curr;       /* Current Thread. */
 	struct thread * next;       /* Next Thread.    */
@@ -253,7 +311,8 @@ PUBLIC int thread_yield(void)
 	if (thread_get_id(curr) == KTHREAD_MASTER_TID)
 		return (-EINVAL);
 
-	idle = KTHREAD_IDLE(core_get_id());
+	coreid = core_get_id();
+	idle   = KTHREAD_IDLE(coreid);
 
 	/* Prevent this call be preempted by any maskable interrupt. */
 	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
@@ -284,7 +343,18 @@ PUBLIC int thread_yield(void)
 
 		/* There are no other threads and I can continue. */
 		else if (curr->state == THREAD_RUNNING)
-			next = curr;
+		{
+			/* Does curr still have an affinity to the underlying core? */
+			if (KTHREAD_AFFINITY_MATCH(curr->affinity, (1 << coreid)))
+				next = curr;
+
+			/* Lose affinity. */
+			else
+			{
+				curr->state = THREAD_STOPPED;
+				next = idle;
+			}
+		}
 
 		/* I finish and there are no other threads. Switch to idle. */
 		else
@@ -365,16 +435,18 @@ PRIVATE int thread_compare_age(struct resource * a, struct resource * b)
  */
 PUBLIC void thread_manager(void)
 {
-	int nodeid;
-	bool do_schedule;
-	struct tnode * older;
-	struct tnode nodes[CORES_NUM];
-	struct resource_arrangement olders;
+	int coreid;                         /* Current core ID.    */
+	int nodeid;                         /* Current helper ID.  */
+	bool do_schedule;                   /* Need to schedule?   */
+	struct tnode * older;               /* Older node pointer. */
+	struct tnode nodes[CORES_NUM];      /* List Helpers.       */
+	struct resource_arrangement olders; /* List of olders.     */
 
 	/* Initialize priority queue. */
 	olders = RESOURCE_ARRANGEMENT_INITIALIZER;
 	nodeid = 0;
 
+	/* Lock thread system. */
 	spinlock_lock(&lock_tm);
 	spinlock_lock(&lock_curr_tm);
 
@@ -409,8 +481,18 @@ PUBLIC void thread_manager(void)
 		if (do_schedule)
 		{
 			/* Notify a scheduling event to the older thread. */
-			if ((older = (struct tnode *) resource_dequeue(&olders)) != NULL)
-				KASSERT(kevent_notify(KEVENT_SCHED, thread_get_coreid(older->thread)) == 0);
+			while ((older = (struct tnode *) resource_dequeue(&olders)) != NULL)
+			{
+				/* Gets the target coreid. */
+				coreid = thread_get_coreid(older->thread);
+
+				/* Sets the desired affinity to the target core. */
+				thread_desired_affinity = KTHREAD_AFFINITY_FIXED(coreid);
+
+				/* Did find any thread that fit into the target core? */
+				if (resource_search_verify(&scheduling, thread_choose) >= 0)
+					KASSERT(kevent_notify(KEVENT_SCHED, coreid) == 0);
+			}
 		}
 
 	/* Release the thread system. */
@@ -610,11 +692,16 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 		utid = KTHREAD_USER_ID(new_thread);
 
 		/* Initialize thread structure. */
-		new_thread->tid   = _tid;
-		new_thread->arg   = arg;
-		new_thread->start = start;
+		new_thread->tid      = _tid;
+		new_thread->arg      = arg;
+		new_thread->start    = start;
+		new_thread->affinity = KTHREAD_AFFINITY_DEFAULT;
 
-		/* Static put the thread on a coreid. */
+		/**
+		 * Indicate the first core based on the offset of thread user thread
+		 * (not really used yet). Obs.: Its is greater than 0 because the
+		 * core 0 is reserved to the master thread
+		 */
 		KASSERT((new_thread->coreid = (utid % KTHREAD_IDLE_MAX) + 1) > 0);
 
 		/* Store reference to the stacks of the thread. */
@@ -692,6 +779,7 @@ PUBLIC void __thread_init(void)
 		/* Initialize thread structure. */
 		idle->coreid        = coreid;
 		idle->state         = THREAD_RUNNING;
+		idle->affinity      = KTHREAD_AFFINITY_FIXED(coreid);
 		idle->age           = THREAD_QUANTUM;
 		idle->arg           = NULL;
 		idle->start         = (void *(*)(void*)) thread_idle;
@@ -700,8 +788,11 @@ PUBLIC void __thread_init(void)
 		/* Sets running thread. */
 		curr_threads[coreid] = idle;
 
-		/* Thread id must be the same of coreid. */
+		/* Thread id should be the same of coreid. */
 		KASSERT(KERNEL_THREAD_ID(idle) == thread_get_coreid(idle));
+
+		/* Affinity should only be with the coreid. */
+		KASSERT(idle->affinity == (1 << coreid));
 
 		/*
 		 * We should do some busy waitting here. When the kernel is under
