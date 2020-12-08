@@ -100,6 +100,18 @@
 	/**@}*/
 
 	/**
+	 * @name Affinity.
+	 */
+	/**@{*/
+	#define KTHREAD_AFFINITY_SET           ((1 << CORES_NUM) - 1)                            /**< Mask of cores set.             */
+	#define KTHREAD_AFFINITY_MASTER        (1 << COREID_MASTER)                              /**< Master thread affinity.        */
+	#define KTHREAD_AFFINITY_DEFAULT       (KTHREAD_AFFINITY_SET & ~KTHREAD_AFFINITY_MASTER) /**< Default user affinity.         */
+	#define KTHREAD_AFFINITY_IS_VALID(aff) (aff & KTHREAD_AFFINITY_SET)                      /**< Valid affinity checker.        */
+	#define KTHREAD_AFFINITY_FIXED(coreid) (1 << coreid)                                     /**< Affinity related to a coreid.  */
+	#define KTHREAD_AFFINITY_MATCH(a, b)   (a & b)                                           /**< Similarity between affinities. */
+	/**@}*/
+
+	/**
 	 * @name Features
 	 */
 	/**@{*/
@@ -120,8 +132,9 @@
 		struct resource resource; /**< Generic resource information. */
 
 		int tid;                  /**< Thread ID.                    */
-		int coreid;               /**< Core ID.                      */
+		short coreid;             /**< Core ID.                      */
 		short state;              /**< State.                        */
+		int affinity;             /**< Affinity.                     */
 		uint64_t age;             /**< Age.                          */
 		void *arg;                /**< Argument.                     */
 		void *(*start)(void*);    /**< Starting routine.             */
@@ -203,6 +216,53 @@
 	static inline int thread_get_curr_id(void)
 	{
 		return (thread_get_id(thread_get_curr()));
+	}
+
+	/**
+	 * @brief Gets the core set of affinity of a thread.
+	 *
+	 * @param t Target thread.
+	 *
+	 * @returns The core set of affinity.
+	 */
+	static inline int thread_get_affinity(const struct thread *t)
+	{
+		return (t->affinity);
+	}
+
+	/**
+	 * @brief Sets a new affinity to a thread.
+	 *
+	 * @param new_affinity New affinity value.
+	 *
+	 * This function is thread-safe.
+	 *
+	 * @returns Old affinity value.
+	 */
+#if CORE_SUPPORTS_MULTITHREADING
+	EXTERN int thread_set_affinity(struct thread * t, int new_affinity);
+#else
+	static int thread_set_affinity(struct thread * t, int new_affinity)
+	{
+		UNUSED(t);
+		UNUSED(new_affinity);
+
+		return (-ENOSYS);
+	}
+#endif
+
+	/**
+	 * @brief Sets a new affinity to a thread.
+	 *
+	 * @param new_affinity New affinity value.
+	 *
+	 * This function is thread-safe.
+	 *
+	 * @returns Old affinity value.
+	 */
+	static int thread_set_curr_affinity(int new_affinity)
+	{
+		return (thread_set_affinity(thread_get_curr(), new_affinity));
 	}
 
 	/**
