@@ -52,13 +52,17 @@ PUBLIC void thread_asleep(
 	struct thread * curr;
 	struct section_guard guard; /* Section guard. */
 
-	/* Prevent this call be preempted by any maskable interrupt. */
-	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
-
 	spinlock_lock(queue_lock);
 
-		/* Asleep was called from outside the thread system. */
-		thread_lock_tm(&guard);
+		if (user_lock != &lock_tm)
+		{
+			/* Prevent this call be preempted by any maskable interrupt. */
+			section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
+
+
+			/* Asleep was called from outside the thread system. */
+			thread_lock_tm(&guard);
+		}
 
 			/* Stop current thread. */
 			curr        = thread_get_curr();
@@ -67,7 +71,8 @@ PUBLIC void thread_asleep(
 			/* Sleeps on queue. */
 			resource_enqueue(queue, &curr->resource);
 
-		thread_unlock_tm(&guard);
+		if (user_lock != &lock_tm)
+			thread_unlock_tm(&guard);
 
 	spinlock_unlock(queue_lock);
 
@@ -116,13 +121,18 @@ PUBLIC void thread_wakeup(struct thread *t)
 
 #else /* CORE_SUPPORTS_MULTITHREADING */
 
-	int coreid;                 /* Core ID.       */
-	struct section_guard guard; /* Section guard. */
+	int state;                  /* Current thread state. */
+	struct section_guard guard; /* Section guard.        */
 
-	/* Prevent this call be preempted by any maskable interrupt. */
-	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
+	state = thread_get_curr()->state;
 
-	thread_lock_tm(&guard);
+	if (state != THREAD_TERMINATED)
+	{
+		/* Prevent this call be preempted by any maskable interrupt. */
+		section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
+
+		thread_lock_tm(&guard);
+	}
 
 		/* Wake up master thread. */
 		if (t == KTHREAD_MASTER)
@@ -133,13 +143,19 @@ PUBLIC void thread_wakeup(struct thread *t)
 		{
 			thread_schedule(t);
 
-			coreid = thread_get_coreid(t);
-
-			if (IDLE_THREAD(coreid)->state == THREAD_RUNNING)
-				kevent_notify(KEVENT_SCHED, coreid);
+			/* Wake up some idle thread. */
+			for (struct thread * idle = idle_threads; idle < user_threads; ++idle)
+			{
+				if (idle->state == THREAD_RUNNING)
+				{
+					kevent_notify(KEVENT_SCHED, idle->coreid);
+					break;
+				}
+			}
 		}
 
-	thread_unlock_tm(&guard);
+	if (state != THREAD_TERMINATED)
+		thread_unlock_tm(&guard);
 
 #endif /* CORE_SUPPORTS_MULTITHREADING */
 }

@@ -80,6 +80,13 @@
 	}
 #endif
 
+	/**
+	 * @brief Sets the currently running thread.
+	 *
+	 * @param curr New current thread.
+	 */
+	EXTERN void thread_set_curr(struct thread * curr);
+
 #if CLUSTER_IS_MULTICORE
 
 	/**
@@ -102,6 +109,11 @@
 	 */
 	EXTERN spinlock_t lock_tm;
 
+	/**
+	 * @brief Thread manager lock to protect the current thread array.
+	 */
+	EXTERN spinlock_t lock_curr_tm;
+
 	/*============================================================================*
 	 * Protection                                                                 *
 	 *============================================================================*/
@@ -109,15 +121,15 @@
 	/**
 	 * @brief Lock thread system.
 	 */
-	static void thread_lock_tm(struct thread * t, struct section_guard * guard)
+	static void thread_lock_tm(struct section_guard * guard)
 	{
 		section_guard_entry(guard);
 	}
 
 	/**
-	 * @brief Lock thread system.
+	 * @brief Unlock thread system.
 	 */
-	static void thread_unlock_tm(struct thread * t, struct section_guard * guard)
+	static void thread_unlock_tm(struct section_guard * guard)
 	{
 		section_guard_exit(guard);
 	}
@@ -166,6 +178,22 @@
 	 */
 	EXTERN void __thread_free(struct thread *t);
 
+	/**
+	 * @brief Realize operations before execute a newly thread.
+	 *
+	 * @param curr Newly thread.
+	 *
+	 * @author João Vicente Souto
+	 */
+#if CORE_SUPPORTS_MULTITHREADING
+	EXTERN void __thread_prolog(struct thread * curr);
+#else
+	static void __thread_prolog(struct thread * curr)
+	{
+		UNUSED(curr);
+	}
+#endif
+
 	/*============================================================================*
 	 * User functions                                                             *
 	 *============================================================================*/
@@ -200,19 +228,52 @@
 	 */
 	EXTERN void thread_search_retval(void **retval, int tid);
 
-#if CORE_SUPPORTS_MULTITHREADING
-
 	/*============================================================================*
 	 * Scheduling                                                                 *
 	 *============================================================================*/
 
+#if CORE_SUPPORTS_MULTITHREADING
+
 	/**
-	 * @brief Gets idle thread pointer.
+	 * @brief Number of idle threads.
+	 *
+	 * @details Master + Idles == SYS_THREAD_MAX.
+	 */
+	#define KTHREAD_IDLE_MAX (SYS_THREAD_MAX - 1)
+
+	/**
+	 * @name Getters of subset of threads.
+	 *
+	 * @details The threads array is composed by:
+	 * - [0]                           = Master thread
+	 * - [1, SYS_THREAD_MAX - 1]       = Idle threads (one per user core)
+	 * - [SYS_THREAD_MAX, KTHREAD_MAX] = User threads
+	 */
+	/**@{*/
+	#define idle_threads (KTHREAD_MASTER + 1)
+	#define user_threads (KTHREAD_MASTER + SYS_THREAD_MAX)
+	/**@}*/
+
+	/**
+	 * @name Gets thread ID, i.e., the offset inside the thread array.
+	 */
+	/**@{*/
+	#define KTHREAD_IDLE_ID(_t) (_t - idle_threads)
+	#define KTHREAD_USER_ID(_t) (_t - user_threads)
+	/**@}*/
+
+	/**
+	 * @brief Gets idle thread pointer from coreid.
 	 *
 	 * @warning Not use core 0 because it is not a idle thread.
 	 */
-	#define IDLE_THREAD(coreid) (&threads[coreid])
+	#define KTHREAD_IDLE(coreid) ((coreid > 0) ? &threads[coreid] : NULL)
 
+	/**
+	 * @brief Insert a new thread into the scheduling queue.
+	 *
+	 * @param t Target thread.
+	 */
 	EXTERN void thread_schedule(struct thread * new_thread);
 
 #endif /* CORE_SUPPORTS_MULTITHREADING */

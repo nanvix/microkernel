@@ -24,6 +24,10 @@
 
 #include "common.h"
 
+/*============================================================================*
+ * Global Variables                                                           *
+ *============================================================================*/
+
 /*
  * Import definitions.
  */
@@ -72,8 +76,17 @@ PUBLIC int next_tid;
  */
 PUBLIC spinlock_t lock_tm;
 
+/**
+ * @brief Thread manager lock to protect the current thread array.
+ */
+PUBLIC spinlock_t lock_curr_tm;
+
 /*============================================================================*
  * Return values                                                              *
+ *============================================================================*/
+
+/*============================================================================*
+ * Variables                                                                  *
  *============================================================================*/
 
 /**
@@ -152,22 +165,53 @@ PUBLIC void thread_search_retval(void **retval, int tid)
  *============================================================================*/
 
 /*============================================================================*
+ * thread_set_curr()                                                          *
+ *============================================================================*/
+
+/**
+ * @brief Sets the currently running thread.
+ *
+ * @param curr New current thread.
+ */
+PUBLIC void thread_set_curr(struct thread * curr)
+{
+	struct section_guard guard; /* Section guard.  */
+
+	/* Prevent this call be preempted by any maskable interrupt. */
+	section_guard_init(&guard, &lock_curr_tm, INTERRUPT_LEVEL_NONE);
+
+	section_guard_entry(&guard);
+		curr_threads[core_get_id()] = curr;
+	section_guard_exit(&guard);
+}
+
+/*============================================================================*
  * thread_get_curr()                                                          *
  *============================================================================*/
 
 /**
-* @brief Gets the currently running thread.
-*
-* The thread_get() function returns a pointer to the thread
-* that is running in the underlying core.
-*
-* @returns A pointer to the thread that is running in the
-* underlying core.
-*/
+ * @brief Gets the currently running thread.
+ *
+ * The thread_get() function returns a pointer to the thread
+ * that is running in the underlying core.
+ *
+ * @returns A pointer to the thread that is running in the
+ * underlying core.
+ */
 PUBLIC struct thread * thread_get_curr(void)
 {
+	struct thread * curr;       /* Current thread. */
+	struct section_guard guard; /* Section guard.  */
+
+	/* Prevent this call be preempted by any maskable interrupt. */
+	section_guard_init(&guard, &lock_curr_tm, INTERRUPT_LEVEL_NONE);
+
+	section_guard_entry(&guard);
+		curr = curr_threads[core_get_id()];
+	section_guard_exit(&guard);
+
 	/* NULL pointer should not happen. */
-	return (curr_threads[core_get_id()]);
+	return (curr);
 }
 
 /*============================================================================*
@@ -266,6 +310,36 @@ PUBLIC struct thread * thread_alloc(void)
 }
 
 /*============================================================================*
+ * __thread_free()                                                            *
+ *============================================================================*/
+
+#if !CORE_SUPPORTS_MULTITHREADING
+
+/**
+ * @brief Underlying releases a thread.
+ *
+ * The thread_free() function releases the thread entry pointed to by
+ * @p t in the table of threads.
+ *
+ * @note This function is NOT thread-safe.
+ *
+ * @author João Vicente Souto
+ */
+PUBLIC void __thread_free(struct thread *t)
+{
+	struct section_guard guard; /* Section guard.  */
+
+	/* Prevent this call be preempted by any maskable interrupt. */
+	section_guard_init(&guard, &lock_curr_tm, INTERRUPT_LEVEL_NONE);
+
+	section_guard_entry(&guard);
+		curr_threads[t->coreid] = NULL;
+	section_guard_exit(&guard);
+}
+
+#endif
+
+/*============================================================================*
  * thread_free()                                                              *
  *============================================================================*/
 
@@ -283,15 +357,7 @@ PUBLIC void thread_free(struct thread *t)
 {
 	KASSERT(WITHIN(t, &threads[0], &threads[KTHREAD_MAX]));
 
-#if CORE_SUPPORTS_MULTITHREADING
-
 	__thread_free(t);
-
-#else
-
-	curr_threads[t->coreid] = NULL;
-
-#endif
 
 	t->coreid = -1;
 	t->state  = THREAD_NOT_STARTED;
@@ -325,28 +391,15 @@ PUBLIC NORETURN void thread_start(void)
 
 	curr = thread_get_curr();
 
-#if CORE_SUPPORTS_MULTITHREADING
+	__thread_prolog(curr);
 
-	struct section_guard guard; /* Section guard.    */
+	interrupts_enable();
+	interrupts_set_level(INTERRUPT_LEVEL_LOW);
+	interrupt_mask(INTERRUPT_TIMER);
 
-	/* Prevent this call be preempted by any maskable interrupt. */
-	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
+		retval = curr->start(curr->arg);
 
-	thread_lock_tm(&guard);
-
-		/* Verifies if the next thread is zombie */
-		struct thread * zombie = (struct thread *) curr->resource.next;
-
-		if (zombie && zombie->state == THREAD_ZOMBIE)
-			thread_free(zombie);
-
-		curr->resource.next = NULL;
-
-	thread_unlock_tm(&guard);
-
-#endif
-
-	retval = curr->start(curr->arg);
+	interrupts_disable();
 
 	thread_exit(retval);
 
@@ -468,8 +521,9 @@ PUBLIC void thread_init(void)
 	/* Init next thread ID. */
 	next_tid = (KTHREAD_MASTER_TID + 1);
 
-	/* Init thread manager lock. */
+	/* Init thread manager locks. */
 	spinlock_init(&lock_tm);
+	spinlock_init(&lock_curr_tm);
 
 	/* Init return values structure. */
 	for (int i = 0; i < KTHREAD_EXIT_VALUE_NUM; ++i)

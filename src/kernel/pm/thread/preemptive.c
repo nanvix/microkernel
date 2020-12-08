@@ -39,41 +39,10 @@ PRIVATE struct stack *ustacks[THREAD_MAX];
 PRIVATE struct stack *kstacks[THREAD_MAX];
 /**@}*/
 
-/*============================================================================*
- * Scheduler variables                                                        *
- *============================================================================*/
-
-/**
- * @name Gets idle thread based on coreid.
- */
-/**@{*/
-#define IDLE_THREAD_ID(_t)   (_t - idle_threads)
-#define USER_THREAD_ID(_t)   (_t - user_threads)
-/**@}*/
-
-/**
- * @brief Number of idle threads.
- *
- * @details Master + Idles == SYS_THREAD_MAX.
- */
-#define IDLE_THREAD_MAX (SYS_THREAD_MAX - 1)
-
-/**
- * @brief Scheduler queue per core/idle thread.
- *
- * @details The next pointer of the idle thread is used
- * to store the schedule queue of each core.
- * Id 0 is not an idle thread but is the initial thread
- * because the correspondence of the core ID with that of
- * the thread.
- */
-PRIVATE struct thread * idle_threads = (KTHREAD_MASTER + 1);
-PRIVATE struct thread * user_threads = (KTHREAD_MASTER + SYS_THREAD_MAX);
-
 /**
  * @brief Schedule queues.
  */
-PRIVATE struct resource_arrangement schedules;
+PRIVATE struct resource_arrangement scheduling;
 
 /*============================================================================*
  * Thread Allocation/Release                                                  *
@@ -98,7 +67,7 @@ PUBLIC void __thread_free(struct thread *t)
 	int utid;
 	KASSERT(t->state == THREAD_ZOMBIE);
 
-	utid = USER_THREAD_ID(t);
+	utid = KTHREAD_USER_ID(t);
 	kpage_put((void *) ustacks[utid]);
 	kpage_put((void *) kstacks[utid]);
 	ustacks[utid] = NULL;
@@ -114,58 +83,32 @@ PUBLIC void __thread_free(struct thread *t)
  *============================================================================*/
 
 /**
- * Switch between contexts.
+ * @brief Switch between contexts.
+ *
+ * @param previous Previous thread context where the current context will be
+ * stored.
+ * @param next     Next thread context from which the new context will be
+ * consumed.
+ *
+ * @todo We must verify if the @p previous and @p next are pointing to kernel
+ * pages and not to user pages.
  */
-PRIVATE int thread_switch_to(struct context ** previous, struct context ** next)
+PRIVATE void thread_switch_to(struct context ** previous, struct context ** next)
 {
 	/* Invalid thread. */
-	if (thread_get_curr_id() == KTHREAD_MASTER_TID)
-		return (-EINVAL);
+	KASSERT(thread_get_curr_id() != KTHREAD_MASTER_TID);
 
 	/* Does a thread try to switch to itself? */
-	if (previous == next)
-		return (-EINVAL);
+	KASSERT(previous != next);
 
 	/* Invalid previous. */
-	if ((previous == NULL) || (!mm_is_kaddr(VADDR(previous))))
-		return (-EINVAL);
-
-	/* Will previous be overwritten? */
-	if (*previous != NULL)
-		return (-EINVAL);
+	KASSERT(previous != NULL && *previous == NULL);
 
 	/* Invalid next. */
-	if ((next == NULL) || (!mm_is_kaddr(VADDR(next))))
-		return (-EINVAL);
+	KASSERT(next != NULL && *next != NULL);
 
-	/* Invalid next context. */
-	if ((*next == NULL) || (!mm_is_kaddr(VADDR(*next))))
-		return (-EINVAL);
-
-	return (context_switch_to(previous, next));
-}
-
-/*============================================================================*
- * thread_schedule()                                                          *
- *============================================================================*/
-
-/**
-* @brief Insert a new thread into a schedule queue.
-*
-* @param t New thread to insert into @idle queue.
-*/
-PUBLIC void thread_schedule(struct thread * t)
-{
-	/* Valid user thread. */
-	KASSERT(WITHIN(t, &user_threads[0], &user_threads[THREAD_MAX]));
-
-	/* Reconfigure the thread. */
-	t->age    = 0ULL;
-	t->state  = THREAD_READY;
-	t->coreid = -1;
-
-	/* Enqueue new thread. */
-	resource_enqueue(&schedules, &t->resource);
+	/* Switch with success. */
+	KASSERT(context_switch_to(previous, next) == 0);
 }
 
 /*============================================================================*
@@ -180,7 +123,112 @@ PUBLIC void thread_schedule(struct thread * t)
 */
 PRIVATE struct thread * thread_schedule_next(void)
 {
-	return ((struct thread *) (resource_dequeue(&schedules)));
+	return ((struct thread *) resource_dequeue(&scheduling));
+}
+
+/*============================================================================*
+ * thread_schedule()                                                          *
+ *============================================================================*/
+
+/**
+* @brief Insert a new thread into the scheduling queue.
+*
+* @param t Target thread.
+*/
+PUBLIC void thread_schedule(struct thread * t)
+{
+	/* Valid user thread. */
+	KASSERT(WITHIN(t, &user_threads[0], &user_threads[THREAD_MAX]));
+
+	KASSERT(t->state != THREAD_RUNNING);
+
+	/* Reconfigure the thread. */
+	t->age    = 0ULL;
+	t->state  = THREAD_READY;
+
+	/* Enqueue new thread. */
+	resource_enqueue(&scheduling, &t->resource);
+}
+
+/*============================================================================*
+ * __thread_prolog_config()                                                   *
+ *============================================================================*/
+
+/**
+ * @brief Configurates the prolog of the next thread.
+ *
+ * @details The prolog is used to schedule the previous thread because it cannot
+ * schedule/free itself.
+ *
+ * @param curr Thread that is exiting the core.
+ * @param next Thread that will be scheduled.
+ */
+PRIVATE void __thread_prolog_config(struct thread * curr, struct thread * next)
+{
+	/* Avoid to set itself. */
+	if (curr == next)
+		return;
+
+	/* Prolog has no operations for Idles. */
+	if (WITHIN(curr, &idle_threads[0], &idle_threads[KTHREAD_IDLE_MAX]))
+		return;
+
+	/* Current is not in an arrangement, so we need to schedule it. */
+	next->resource.next = curr->state != THREAD_SLEEPING ? &curr->resource : NULL;
+
+	/**
+	 * Current thread must be freed, so we sinalize that the thread
+	 * is in a zombie state.
+	 */
+	if (UNLIKELY(curr->state == THREAD_TERMINATED))
+	{
+		KASSERT(curr != next);
+		curr->state = THREAD_ZOMBIE;
+	}
+}
+
+/*============================================================================*
+ * __thread_prolog()                                                          *
+ *============================================================================*/
+
+/**
+ * @brief Configurates the prolog of the next thread.
+ *
+ * @details The prolog is used to schedule the previous thread because it cannot
+ * schedule/free itself.
+ *
+ * @param curr Newly scheduled thread.
+ */
+PUBLIC void __thread_prolog(struct thread * curr)
+{
+	struct section_guard guard; /* Section guard.    */
+
+	/* Prevent this call be preempted by any maskable interrupt. */
+	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
+
+	thread_lock_tm(&guard);
+
+		/* Verifies if the next thread is zombie */
+		struct thread * t = (struct thread *) curr->resource.next;
+
+		/* There is a thread configurated. */
+		if (LIKELY(t != NULL))
+		{
+			/* Schedules the stopped thread. */
+			if (t->state == THREAD_STOPPED)
+			{
+				KASSERT(!WITHIN(t, &idle_threads[0], &idle_threads[KTHREAD_IDLE_MAX]));
+				thread_schedule(t);
+			}
+
+			/* Releases the thread resources. */
+			else if (t->state == THREAD_ZOMBIE)
+				thread_free(t);
+
+			curr->resource.next = NULL;
+		}
+
+	thread_unlock_tm(&guard);
 }
 
 /*============================================================================*
@@ -205,7 +253,7 @@ PUBLIC int thread_yield(void)
 	if (thread_get_id(curr) == KTHREAD_MASTER_TID)
 		return (-EINVAL);
 
-	idle = IDLE_THREAD(thread_get_coreid(curr));
+	idle = KTHREAD_IDLE(core_get_id());
 
 	/* Prevent this call be preempted by any maskable interrupt. */
 	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
@@ -217,17 +265,21 @@ PUBLIC int thread_yield(void)
 	 */
 
 		/* Is there any user thread to schedule? */
-		if  ((next = thread_schedule_next()) != NULL)
+		if ((next = thread_schedule_next()) != NULL)
+		{
+			/* Thread not exit the core yet? */
+			if (UNLIKELY(next->ctx == NULL))
+			{
+				thread_schedule(next);
+				next = NULL;
+			}
+		}
+
+		/* Valid next? */
+		if  (next)
 		{
 			if (curr->state == THREAD_RUNNING)
-			{
-				/* Update thread states. */
 				curr->state = THREAD_STOPPED;
-
-				/* Make user thread schedulable. */
-				if (curr != idle)
-					thread_schedule(curr);
-			}
 		}
 
 		/* There are no other threads and I can continue. */
@@ -239,26 +291,13 @@ PUBLIC int thread_yield(void)
 			next = idle;
 
 	/**
-	 * Release terminated thread (@see thread_exit).
+	 * Configure the next thread.
 	 */
 
-		if (curr->state == THREAD_TERMINATED)
-		{
-			/* Sanity check. */
-			KASSERT(curr != idle && curr != next);
-
-			/* Put the thread to zombie. */
-			curr->state         = THREAD_ZOMBIE;
-			next->resource.next = &curr->resource;
-		}
-
-	/**
-	 * Set next thread to running state.
-	 */
-
-		next->coreid               = core_get_id();
-		next->state                = THREAD_RUNNING;
-		curr_threads[next->coreid] = next;
+		__thread_prolog_config(curr, next);
+		next->coreid = core_get_id();
+		next->state  = THREAD_RUNNING;
+		thread_set_curr(next);
 
 	thread_unlock_tm(&guard);
 
@@ -272,17 +311,7 @@ PUBLIC int thread_yield(void)
 	/* Restore context function must clean ctx variable. */
 	KASSERT(curr->ctx == NULL);
 
-	thread_lock_tm(&guard);
-
-		/* Verifies if the next thread is zombie */
-		struct thread * zombie = (struct thread *) curr->resource.next;
-
-		if (zombie && zombie->state == THREAD_ZOMBIE)
-			thread_free(zombie);
-
-		curr->resource.next = NULL;
-
-	thread_unlock_tm(&guard);
+	__thread_prolog(curr);
 
 	return (0);
 }
@@ -336,8 +365,8 @@ PRIVATE int thread_compare_age(struct resource * a, struct resource * b)
  */
 PUBLIC void thread_manager(void)
 {
-	int coreid;
 	int nodeid;
+	bool do_schedule;
 	struct tnode * older;
 	struct tnode nodes[CORES_NUM];
 	struct resource_arrangement olders;
@@ -347,6 +376,9 @@ PUBLIC void thread_manager(void)
 	nodeid = 0;
 
 	spinlock_lock(&lock_tm);
+	spinlock_lock(&lock_curr_tm);
+
+		do_schedule = (scheduling.size != 0);
 
 		/* Find the older thread per coreid. */
 		for (int i = 1; i < CORES_NUM; ++i)
@@ -354,8 +386,8 @@ PUBLIC void thread_manager(void)
 			/* Update thread age. */
 			curr_threads[i]->age++;
 
-			/* Young thread. */
-			if (curr_threads[i]->age < THREAD_QUANTUM)
+			/* Avoid schedule or Young thread. */
+			if (!do_schedule || curr_threads[i]->age < THREAD_QUANTUM)
 				continue;
 
 			/* Configure the node. */
@@ -373,23 +405,16 @@ PUBLIC void thread_manager(void)
 			nodeid++;
 		}
 
-		/* Get older thread. */
-		while ((older = (struct tnode *) resource_dequeue(&olders)) != NULL)
+		/* Has any thread waiting? */
+		if (do_schedule)
 		{
-			coreid = thread_get_coreid(older->thread);
-
-			/* Has any thread waiting? */
-			if (schedules[coreid].size)
-			{
-				/* Notify scheduling event. */
-				KASSERT(kevent_notify(KEVENT_SCHED, coreid) == 0);
-
-				/* Schedule only one thread per management. */
-				break;
-			}
+			/* Notify a scheduling event to the older thread. */
+			if ((older = (struct tnode *) resource_dequeue(&olders)) != NULL)
+				KASSERT(kevent_notify(KEVENT_SCHED, thread_get_coreid(older->thread)) == 0);
 		}
 
 	/* Release the thread system. */
+	spinlock_unlock(&lock_curr_tm);
 	spinlock_unlock(&lock_tm);
 }
 
@@ -415,7 +440,7 @@ PRIVATE NORETURN void thread_idle(void)
 
 	idle = thread_get_curr();
 
-	KASSERT(WITHIN(idle, &idle_threads[0], &idle_threads[IDLE_THREAD_MAX]));
+	KASSERT(WITHIN(idle, &idle_threads[0], &idle_threads[KTHREAD_IDLE_MAX]));
 
 	interrupts_enable();
 
@@ -582,7 +607,7 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 
 		/* Get thread ID. */
 		_tid = next_tid++;
-		utid = USER_THREAD_ID(new_thread);
+		utid = KTHREAD_USER_ID(new_thread);
 
 		/* Initialize thread structure. */
 		new_thread->tid   = _tid;
@@ -590,7 +615,7 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 		new_thread->start = start;
 
 		/* Static put the thread on a coreid. */
-		KASSERT((new_thread->coreid = (utid % IDLE_THREAD_MAX) + 1) > 0);
+		KASSERT((new_thread->coreid = (utid % KTHREAD_IDLE_MAX) + 1) > 0);
 
 		/* Store reference to the stacks of the thread. */
 		ustacks[utid] = ustack;
@@ -603,7 +628,7 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 		thread_schedule(new_thread);
 
 		/* Is the Idle thread running? */
-		idle = IDLE_THREAD(new_thread->coreid);
+		idle = KTHREAD_IDLE(new_thread->coreid);
 		if (idle->state == THREAD_RUNNING)
 			kevent_notify(KEVENT_SCHED, idle->coreid);
 
@@ -645,19 +670,19 @@ PUBLIC void __thread_init(void)
 	struct thread * idle;
 
 	/* Sanity checks. */
-	KASSERT(IDLE_THREAD_MAX == (SYS_THREAD_MAX - 1));
-	KASSERT(IDLE_THREAD_MAX == (CORES_NUM - 1));
+	KASSERT(KTHREAD_IDLE_MAX == (SYS_THREAD_MAX - 1));
+	KASSERT(KTHREAD_IDLE_MAX == (CORES_NUM - 1));
 	KASSERT(THREAD_MAX == THREAD_MAX);
 	KASSERT(nthreads == 1);
 
-	/* Initialize the schedule queue. */
-	schedules = RESOURCE_ARRANGEMENT_INITIALIZER;
+	/* Configure schedule queues. */
+	scheduling = RESOURCE_ARRANGEMENT_INITIALIZER;
 
 	/* Set schedule handler. */
 	KASSERT(kevent_set_handler(KEVENT_SCHED, thread_handler) == 0);
 
 	/* Spawn idle threads. */
-	for (int coreid = 1; coreid <= IDLE_THREAD_MAX; coreid++)
+	for (int coreid = 1; coreid <= KTHREAD_IDLE_MAX; coreid++)
 	{
 		KASSERT((idle = thread_alloc()) != NULL);
 

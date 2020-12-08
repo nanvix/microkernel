@@ -78,6 +78,6 @@ PUBLIC void semaphore_up(struct semaphore *sem)
 
 	spinlock_lock(&sem->lock);
 		sem->count++;
-		cond_broadcast(&sem->cond);
+		cond_anycast(&sem->cond);
 	spinlock_unlock(&sem->lock);
 }
