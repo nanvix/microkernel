@@ -395,7 +395,11 @@ PUBLIC int do_kcall(
 	word_t arg4,
 	word_t syscall_nr)
 {
+	int coreid;
+	int affinity;
 	int ret = -EINVAL;
+
+	coreid = core_get_id();
 
 	/* Parse system call number. */
 	switch (syscall_nr)
@@ -405,6 +409,20 @@ PUBLIC int do_kcall(
 			break;
 
 #if (THREAD_MAX > 1)
+
+		case NR_thread_set_affinity:
+		{
+			affinity = (int) arg0;
+
+			if (KTHREAD_AFFINITY_IS_VALID(affinity))
+			{
+				ret = thread_set_curr_affinity(affinity);
+
+				/* Lose affinity? */
+				if (KTHREAD_AFFINITY_MATCH(affinity, (1 << coreid)) == 0)
+					kernel_thread_yield();
+			}
+		} break;
 
 		case NR_thread_exit:
 			kernel_thread_exit((void *)(long) arg0);
@@ -497,10 +515,6 @@ PUBLIC int do_kcall(
 		/* Forward system call. */
 		default:
 		{
-			int coreid;
-
-			coreid = core_get_id();
-
 			/* Reserve sysboard. */
 			mutex_lock(&sysboard[coreid].sysmutex);
 
