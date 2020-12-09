@@ -275,7 +275,12 @@ PUBLIC void __thread_prolog(struct thread * curr)
 			if (t->state == THREAD_STOPPED)
 			{
 				KASSERT(!WITHIN(t, &idle_threads[0], &idle_threads[KTHREAD_IDLE_MAX]));
+
+				/* Insert the thread on the scheduling queue. */
 				thread_schedule(t);
+
+				/* Verify if it can be already scheduled. */
+				do_thread_schedule(false);
 			}
 
 			/* Releases the thread resources. */
@@ -427,13 +432,13 @@ PRIVATE int thread_compare_age(struct resource * a, struct resource * b)
 	if (ta == tb)
 		return (0);
 
-	return (ta < tb) ? (-1) : (1);
+	return (ta < tb) ? (1) : (-1);
 }
 
 /**
- * @brief Manage the thread system.
+ * @brief Execute schedule algorithm.
  */
-PUBLIC void thread_manager(void)
+PUBLIC void do_thread_schedule(bool is_aging)
 {
 	int coreid;                         /* Current core ID.    */
 	int nodeid;                         /* Current helper ID.  */
@@ -446,57 +451,75 @@ PUBLIC void thread_manager(void)
 	olders = RESOURCE_ARRANGEMENT_INITIALIZER;
 	nodeid = 0;
 
-	/* Lock thread system. */
-	spinlock_lock(&lock_tm);
-	spinlock_lock(&lock_curr_tm);
+	do_schedule = (scheduling.size != 0);
 
-		do_schedule = (scheduling.size != 0);
+	/* Manually call and has no thread to schedule? */
+	if (!is_aging && !do_schedule)
+		return;
 
-		/* Find the older thread per coreid. */
-		for (int i = 1; i < CORES_NUM; ++i)
-		{
-			/* Update thread age. */
+	/* Find the older thread per coreid. */
+	for (int i = 1; i < CORES_NUM; ++i)
+	{
+		/* Update thread age. */
+		if (is_aging)
 			curr_threads[i]->age++;
 
-			/* Avoid schedule or Young thread. */
-			if (!do_schedule || curr_threads[i]->age < THREAD_QUANTUM)
+		/* Avoid schedule or Young thread. */
+		if (!do_schedule || curr_threads[i]->age < THREAD_QUANTUM)
+			continue;
+
+		/* Configure the node. */
+		nodes[nodeid].resource = RESOURCE_INITIALIZER;
+		nodes[nodeid].thread   = curr_threads[i];
+
+		/* Insert ordered. */
+		KASSERT(resource_insert_ordered(
+			&olders,
+			&nodes[nodeid].resource,
+			thread_compare_age
+		) >= 0);
+
+		/* Next node. */
+		nodeid++;
+	}
+
+	/* Has any thread waiting? */
+	if (do_schedule)
+	{
+		/* Notify a scheduling event to the older thread. */
+		while ((older = (struct tnode *) resource_dequeue(&olders)) != NULL)
+		{
+			/* Gets the target coreid. */
+			coreid = thread_get_coreid(older->thread);
+
+			/* Sets the desired affinity to the target core. */
+			thread_desired_affinity = KTHREAD_AFFINITY_FIXED(coreid);
+
+			/* Do not notify itself. */
+			if (coreid == core_get_id())
 				continue;
 
-			/* Configure the node. */
-			nodes[nodeid].resource = RESOURCE_INITIALIZER;
-			nodes[nodeid].thread   = curr_threads[i];
-
-			/* Insert ordered. */
-			KASSERT(resource_insert_ordered(
-				&olders,
-				&nodes[nodeid].resource,
-				thread_compare_age
-			) >= 0);
-
-			/* Next node. */
-			nodeid++;
-		}
-
-		/* Has any thread waiting? */
-		if (do_schedule)
-		{
-			/* Notify a scheduling event to the older thread. */
-			while ((older = (struct tnode *) resource_dequeue(&olders)) != NULL)
+			/* Did find any thread that fit into the target core? */
+			if (resource_search_verify(&scheduling, thread_choose) >= 0)
 			{
-				/* Gets the target coreid. */
-				coreid = thread_get_coreid(older->thread);
-
-				/* Sets the desired affinity to the target core. */
-				thread_desired_affinity = KTHREAD_AFFINITY_FIXED(coreid);
-
-				/* Did find any thread that fit into the target core? */
-				if (resource_search_verify(&scheduling, thread_choose) >= 0)
-					KASSERT(kevent_notify(KEVENT_SCHED, coreid) == 0);
+				KASSERT(kevent_notify(KEVENT_SCHED, coreid) == 0);
+				break;
 			}
 		}
+	}
+}
+
+/**
+ * @brief Manage the thread system.
+ */
+PUBLIC void thread_manager(void)
+{
+	/* Lock thread system. */
+	spinlock_lock(&lock_tm);
+
+		do_thread_schedule(true);
 
 	/* Release the thread system. */
-	spinlock_unlock(&lock_curr_tm);
 	spinlock_unlock(&lock_tm);
 }
 

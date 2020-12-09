@@ -276,6 +276,11 @@
 	 */
 	EXTERN void thread_schedule(struct thread * new_thread);
 
+	/**
+	 * @brief Execute schedule algorithm.
+	 */
+	EXTERN void do_thread_schedule(bool is_aging);
+
 #endif /* CORE_SUPPORTS_MULTITHREADING */
 
 	/*============================================================================*

@@ -141,17 +141,11 @@ PUBLIC void thread_wakeup(struct thread *t)
 		/* Wake up user thread. */
 		else
 		{
+			/* Insert the thread on the scheduling queue. */
 			thread_schedule(t);
 
-			/* Wake up some idle thread. */
-			for (struct thread * idle = idle_threads; idle < user_threads; ++idle)
-			{
-				if (idle->state == THREAD_RUNNING)
-				{
-					kevent_notify(KEVENT_SCHED, idle->coreid);
-					break;
-				}
-			}
+			/* Verify if it can be already scheduled. */
+			do_thread_schedule(false);
 		}
 
 	if (state != THREAD_TERMINATED)
