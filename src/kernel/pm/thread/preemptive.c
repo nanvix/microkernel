@@ -279,8 +279,10 @@ PUBLIC void __thread_prolog(struct thread * curr)
 				/* Insert the thread on the scheduling queue. */
 				thread_schedule(t);
 
+#if 0
 				/* Verify if it can be already scheduled. */
 				do_thread_schedule(false);
+#endif
 			}
 
 			/* Releases the thread resources. */

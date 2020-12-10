@@ -144,8 +144,10 @@ PUBLIC void thread_wakeup(struct thread *t)
 			/* Insert the thread on the scheduling queue. */
 			thread_schedule(t);
 
+#if 0
 			/* Verify if it can be already scheduled. */
 			do_thread_schedule(false);
+#endif
 		}
 
 	if (state != THREAD_TERMINATED)
