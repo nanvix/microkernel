@@ -360,6 +360,48 @@ PUBLIC void do_kcall2(void)
 
 #endif
 
+#if __NANVIX_USE_TASKS
+
+		case NR_task_unlink:
+			ret = task_unlink(
+				(struct task *) sysboard[coreid].arg0
+			);
+			break;
+
+		case NR_task_connect:
+			ret = task_connect(
+				(struct task *) sysboard[coreid].arg0,
+				(struct task *) sysboard[coreid].arg1
+			);
+			break;
+
+		case NR_task_disconnect:
+			ret = task_disconnect(
+				(struct task *) sysboard[coreid].arg0,
+				(struct task *) sysboard[coreid].arg1
+			);
+			break;
+
+		case NR_task_dispatch:
+			ret = task_dispatch(
+				(struct task *) sysboard[coreid].arg0
+			);
+			break;
+
+		case NR_task_continue:
+			ret = task_continue(
+				(struct task *) sysboard[coreid].arg0
+			);
+			break;
+
+		case NR_task_complete:
+			ret = task_complete(
+				(struct task *) sysboard[coreid].arg0
+			);
+			break;
+
+#endif /* __NANVIX_USE_TASKS */
+
 			default:
 				break;
 		}
@@ -513,6 +555,26 @@ PUBLIC int do_kcall(
 			break;
 
 #endif
+
+#if __NANVIX_USE_TASKS
+
+		case NR_task_wait:
+			ret = task_wait(
+				(struct task *) arg0
+			);
+			break;
+
+		case NR_task_current:
+		{
+			if ((void *) arg0 != NULL)
+			{
+				/* TODO: We must verify if this address is in user space. */
+				*((struct task **) arg0) = task_current();
+				ret = 0;
+			}
+		} break;
+
+#endif /* __NANVIX_USE_TASKS */
 
 		/* Forward system call. */
 		default:

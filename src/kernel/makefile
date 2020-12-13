@@ -50,6 +50,7 @@ SRC = $(wildcard dev/*.c)       \
       $(wildcard noc/*.c)       \
       $(wildcard pm/*.c)        \
       $(wildcard pm/thread/*.c) \
+      $(wildcard pm/task/*.c)   \
       $(wildcard sys/*.c)       \
       $(wildcard test/*.c)
 
