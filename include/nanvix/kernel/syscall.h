@@ -108,8 +108,16 @@
 	#define NR_excp_resume         55 /**< kernel_excp_resume()         */
 	#define NR_cluster_get_num     56 /**< kernel_cluster_get_num()     */
 	#define NR_comm_get_port       57 /**< kernel_comm_get_port()       */
+	#define NR_task_unlink         58 /**< kernel_task_unlink()         */
+	#define NR_task_connect        59 /**< kernel_task_connect()        */
+	#define NR_task_disconnect     60 /**< kernel_task_disconnect()     */
+	#define NR_task_dispatch       61 /**< kernel_task_dispatch()       */
+	#define NR_task_wait           62 /**< kernel_task_wait()           */
+	#define NR_task_continue       63 /**< kernel_task_continue()       */
+	#define NR_task_complete       64 /**< kernel_task_complete()       */
+	#define NR_task_current        65 /**< kernel_task_current()        */
 
-	#define NR_last_kcall          58 /**< NR_SYSCALLS definer          */
+	#define NR_last_kcall          66 /**< NR_SYSCALLS definer          */
 	/**@}*/
 
 /*============================================================================*

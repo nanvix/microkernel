@@ -580,6 +580,242 @@
 	 */
 	EXTERN void mutex_unlock(struct mutex *m);
 
+/*============================================================================*
+ *                               Tasks Facility                               *
+ *============================================================================*/
+
+#if __NANVIX_USE_TASKS
+
+	/**
+	 * @name States of a task.
+	 */
+	/**@{*/
+	#define TASK_STATE_ERROR       (-1) /**< Task exit with error.  */
+	#define TASK_STATE_NOT_STARTED  (0) /**< Task not dispatched.   */
+	#define TASK_STATE_READY        (1) /**< Task ready to execute. */
+	#define TASK_STATE_RUNNING      (2) /**< Task running.          */
+	#define TASK_STATE_STOPPED      (3) /**< Task Stopped.          */
+	#define TASK_STATE_COMPLETED    (4) /**< Task completed.        */
+	/**@}*/
+
+	/**
+	 * @name Return behaviors of a task.
+	 *
+	 * @details The return value of the operation function indicates which
+	 * manager actions to perform over the current task.
+	 */
+	/**@{*/
+	#define TASK_RET_ERROR   (-1) /**< Release the task with error.    */
+	#define TASK_RET_SUCCESS  (0) /**< Release the task with success.  */
+	#define TASK_RET_AGAIN    (1) /**< Reschedule the task.            */
+	#define TASK_RET_STOP     (3) /**< Move the task to stopped state. */
+	/**@}*/
+
+	/**
+	 * @brief Invalid Task ID
+	 */
+	#define TASK_NULL_ID (~0ULL)
+
+	/**
+	 * @brief Task arguments and return.
+	 */
+	struct task_args
+	{
+		word_t arg0; /**< Argument slot.    */
+		word_t arg1; /**< Argument slot.    */
+		word_t arg2; /**< Argument slot.    */
+		word_t arg3; /**< Argument slot.    */
+		word_t arg4; /**< Argument slot.    */
+		word_t arg5; /**< Argument slot.    */
+		int ret;     /**< Return value.     */
+	};
+
+	/**
+	 * @brief Task function type.
+	 *
+	 * @param args Argument pointer.
+	 *
+	 * @return Zero to task completed. Non-zero, an error ocurred.
+	 * If the task can be rescheduled, return value must be the -EAGAIN.
+	 */
+	typedef int (*task_fn)(struct task_args *);
+
+	/**
+	 * @brief Task.
+	 */
+	struct task
+	{
+		/*
+		 * XXX: Don't Touch! This Must Come First!
+		 */
+		struct resource resource;             /**< Resource struct.            */
+
+		/**
+		 * @name Period.
+		 */
+		/**@{*/
+		int period;                           /**< Current period value.       */
+		int reload;                           /**< Reload value of the period. */
+		/**@}*/
+
+		/**
+		 * @name Task parameters.
+		 */
+		/**@{*/
+		uint64_t id;                          /**< Identification.             */
+		char state;                           /**< State.                      */
+		/**@}*/
+
+		/**
+		 * @name Dependency graph.
+		 */
+		/**@{*/
+		char parents;                         /**< Number of tracked parents.  */
+		struct resource_arrangement children; /**< List of successors.         */
+		/**@}*/
+
+		/**
+		 * @name Task parameters.
+		 */
+		/**@{*/
+		task_fn fn;                           /**< Function pointer.           */
+		struct task_args args;                /**< Arguments.                  */
+		/**@}*/
+
+		/**
+		 * @brief Waiting control.
+		 */
+		struct semaphore sem;                 /**< Semaphore.                  */
+	};
+
+	/**
+	 * @brief Create a task.
+	 *
+	 * Sets the struct parameters and initializes the mutex for the waiting
+	 * control. The @p arg pointer can be a NULL pointer.
+	 *
+	 * @param task   Task pointer.
+	 * @param fn     Function pointer.
+	 * @param arg    Arguments pointer.
+	 * @param period Period of the task (0 is meaning no periodic).
+	 *
+	 * @return Zero if successfully create the task, non-zero otherwise.
+	 */
+	EXTERN int task_create(
+		struct task * task,
+		task_fn fn,
+		struct task_args * args,
+		int period
+	);
+
+	/**
+	 * @brief Destroy a task.
+	 *
+	 * Sets the struct parameters and initializes the mutex for the waiting
+	 * control. The @p arg pointer can be a NULL pointer.
+	 *
+	 * @param task Task pointer.
+	 *
+	 * @return Zero if successfully create the task, non-zero otherwise.
+	 */
+	EXTERN int task_unlink(struct task * task);
+
+	/**
+	 * @brief Create a dependency on the @p child task to the @p parent task.
+	 *
+	 * @param parent Independent task.
+	 * @param child  Dependent task.
+	 *
+	 * @return Zero if successfully create the dependency, non-zero otherwise.
+	 */
+	EXTERN int task_connect(struct task * parent, struct task * child);
+
+	/**
+	 * @brief Destroy a dependency on the @p child task to the @p parent task.
+	 *
+	 * @param parent Independent task.
+	 * @param child  Dependent task.
+	 *
+	 * @return Zero if successfully create the dependency, non-zero otherwise.
+	 */
+	EXTERN int task_disconnect(struct task * parent, struct task * child);
+
+	/**
+	 * @brief Gets the return value of a task.
+	 *
+	 * @param task Task pointer.
+	 */
+	static inline uint64_t task_get_id(struct task * task)
+	{
+		return (task->id);
+	}
+
+	/**
+	 * @brief Gets the return value of a task.
+	 *
+	 * @param task Task pointer.
+	 */
+	static inline int task_get_return(struct task * task)
+	{
+		return (task->args.ret);
+	}
+
+	/**
+	 * @brief Enqueue a task to the dispatcher thread operate.
+	 *
+	 * @param task Task pointer.
+	 *
+	 * @return Zero if successfully dispatch a task, non-zero otherwise.
+	 */
+	EXTERN int task_dispatch(struct task * task);
+
+	/**
+	 * @brief Wait for a task to complete.
+	 *
+	 * @param task Task pointer.
+	 *
+	 * @return Zero if successfully wait for a task, non-zero otherwise.
+	 */
+	EXTERN int task_wait(struct task * task);
+
+	/**
+	 * @brief Continue a blocked task.
+	 *
+	 * @param target Task pointer.
+	 *
+	 * @returns Zero if successfully wakeup the task, non-zero otherwise.
+	 */
+	EXTERN int task_continue(struct task * task);
+
+	/**
+	 * @brief Complete a task.
+	 *
+	 * @param target Task pointer.
+	 *
+	 * @returns Zero if successfully complete the task, non-zero otherwise.
+	 */
+	EXTERN int task_complete(struct task * task);
+
+	/**
+	 * @brief Get current task.
+	 *
+	 * @returns Current thread running. NULL if the dispatcher is not executing
+	 * a task.
+	 */
+	EXTERN struct task * task_current(void);
+
+	/**
+	 * @brief Notify a system tick to the time-based queue (periodic queue).
+	 */
+	EXTERN void task_tick(void);
+
+	/**
+	 * @brief Initializes task system.
+	 */
+	EXTERN void task_init(void);
+
+#endif /* __NANVIX_USE_TASKS */
+
 #endif /* NANVIX_THREAD_H_ */
 
 /**@}*/
