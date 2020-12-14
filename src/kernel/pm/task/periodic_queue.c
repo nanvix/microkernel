@@ -75,7 +75,7 @@ PUBLIC int periodic_task_enqueue(
 )
 {
 	/* Sanity checks. */
-	KASSERT(!arr || !t);
+	KASSERT(arr && t);
 
 	/* Insert in order based on period. */
 	KASSERT(resource_insert_ordered(arr, &t->resource, periodic_task_order) >= 0);
@@ -108,7 +108,7 @@ PUBLIC int periodic_task_remove(
 )
 {
 	/* Sanity checks. */
-	KASSERT(!arr || !t);
+	KASSERT(arr || t);
 
 	/* Not found? */
 	if (resource_search(arr, &t->resource) < 0)

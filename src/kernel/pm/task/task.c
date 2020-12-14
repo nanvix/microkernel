@@ -506,16 +506,30 @@ PUBLIC int task_unlink(struct task * task)
 		if (UNLIKELY(task->parents || task->children.size))
 			goto error;
 
-		/* Are waiting on actives queue? */
-		if (task->state == TASK_STATE_READY)
-			ret = resource_pop(&tasks.actives, &task->resource);
-
-		/* Are stopped on waiting or periodic queue? */
-		else if (task->state == TASK_STATE_STOPPED)
+		/* Based on task state. */
+		switch (task->state)
 		{
-			ret = (task->reload == 0 || task->period < 0) ?
-				resource_pop(&tasks.actives, &task->resource) : 
-				periodic_task_remove(&tasks.periodics, task)  ;
+			/* Remove from active queue. */
+			case TASK_STATE_READY:
+				ret = resource_pop(&tasks.actives, &task->resource);
+				break;
+
+			/* Remove from waiting or periodics queue. */
+			case TASK_STATE_STOPPED:
+				ret = (task->reload == 0 || task->period < 0) ?
+					resource_pop(&tasks.waiting, &task->resource) :
+					periodic_task_remove(&tasks.periodics, task)  ;
+				break;
+
+			/* Do not unlink a running task. */
+			case TASK_STATE_RUNNING:
+				ret = (-EINVAL);
+				break;
+
+			/* Otherwise, it is a success. */
+			default:
+				ret = 0;
+				break;
 		}
 
 error:
@@ -762,10 +776,8 @@ PUBLIC int task_complete(struct task * target)
 PUBLIC void task_tick(void)
 {
 	struct task * task;
-	struct section_guard guard;
 
-	section_guard_init(&guard, &tasks.lock, INTERRUPT_LEVEL_NONE);
-	section_guard_entry(&guard);
+	spinlock_lock(&tasks.lock);
 
 	/* Pop some periodic task. */
 	while ((task = periodic_task_dequeue(&tasks.periodics)) != NULL)
@@ -777,7 +789,7 @@ PUBLIC void task_tick(void)
 			break;
 	}
 
-	section_guard_exit(&guard);
+	spinlock_unlock(&tasks.lock);
 }
 
 /*============================================================================*
