@@ -38,6 +38,7 @@
 	/* External dependencies. */
 	#include <nanvix/hal.h>
 	#include <nanvix/hal/resource.h>
+	#include <nanvix/kernel/config.h>
 	#include <nanvix/const.h>
 
 /*============================================================================*
@@ -45,16 +46,30 @@
  *============================================================================*/
 
 	/**
-	 * @brief Maximum number of system threads.
+	 * @brief Kernel thread dedicated to kernel services.
+	 */
+	#if __NANVIX_USE_TASKS
+		#define KTHREAD_SERVICE_MAX (2) /**< Master + Dispatcher thread. */
+	#else
+		#define KTHREAD_SERVICE_MAX (1) /**< Master thread.              */
+	#endif
+
+	/**
+	 * @brief Idle thread dedicated to occupy the idle core.
 	 *
 	 * @details One master thread to respond syscall requests plus
 	 * (CORES_NUM - 1) idle threads to occupy the core idle time.
 	 */
 	#if CORE_SUPPORTS_MULTITHREADING
-		#define SYS_THREAD_MAX CORES_NUM
+		#define KTHREAD_IDLE_MAX (CORES_NUM - 1) /**< CORES_NUM - Master thread. */
 	#else
-		#define SYS_THREAD_MAX 1
+		#define KTHREAD_IDLE_MAX (0)             /**< There is not idle thread.  */
 	#endif
+
+	/**
+	 * @brief Maximum number of system threads.
+	 */
+	#define SYS_THREAD_MAX (KTHREAD_SERVICE_MAX + KTHREAD_IDLE_MAX)
 
 	/**
  	* @brief Size of the buffer with exiting values.
@@ -66,9 +81,9 @@
 	 */
 	#if CORE_SUPPORTS_MULTITHREADING && defined(__mppa256__)
 		#ifdef __k1bio__
-			#define THREAD_MAX 8
+			#define THREAD_MAX (8 - KTHREAD_SERVICE_MAX)  /**< Reserved 8 kernel pages. */
 		#else
-			#define THREAD_MAX 24
+			#define THREAD_MAX (24 - KTHREAD_SERVICE_MAX) /**< Reserved 24 kernel pages.*/
 		#endif
 	#elif CORE_SUPPORTS_MULTITHREADING && !defined(__mppa256__)
 		#define THREAD_MAX (2 * (SYS_THREAD_MAX - 1))
@@ -150,15 +165,29 @@
 	 * @name Thread IDs.
 	 */
 	/**@{*/
-	#define KTHREAD_NULL_TID               -1 /**< ID of NULL thread.   */
-	#define KTHREAD_MASTER_TID              0 /**< ID of master thread. */
-	#define KTHREAD_LEADER_TID SYS_THREAD_MAX /**< ID of leader thread. */
+	#define KTHREAD_NULL_TID                   (-1) /**< ID of NULL thread.       */
+	#define KTHREAD_MASTER_TID                  (0) /**< ID of master thread.     */
+#if __NANVIX_USE_TASKS
+	#define KTHREAD_DISPATCHER_TID              (1) /**< ID of dispatcher thread. */
+#else
+	#define KTHREAD_DISPATCHER_TID KTHREAD_NULL_TID /**< ID of dispatcher thread. */
+#endif
+	#define KTHREAD_LEADER_TID     (SYS_THREAD_MAX) /**< ID of leader thread.     */
 	/**@}*/
 
 	/**
 	 * @brief Master thread.
 	 */
 	#define KTHREAD_MASTER (&threads[0])
+
+	/**
+	 * @brief Dispatcher thread.
+	 */
+#if __NANVIX_USE_TASKS
+	#define KTHREAD_DISPATCHER (&threads[1])
+#else
+	#define KTHREAD_DISPATCHER (NULL)
+#endif
 
 	/**
 	 * @brief Gets the currently running thread.

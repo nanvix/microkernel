@@ -32,11 +32,16 @@
 PRIVATE volatile int tm_shutdown = 0;
 
 /**
- * @name stacks.
+ * @brief Maximum of stacks.
+ */
+#define KSTACK_MAX (THREAD_MAX + KTHREAD_SERVICE_MAX)
+
+/**
+ * @name Stacks.
  */
 /**@{*/
-PRIVATE struct stack *ustacks[THREAD_MAX];
-PRIVATE struct stack *kstacks[THREAD_MAX];
+PRIVATE struct stack *ustacks[KSTACK_MAX];
+PRIVATE struct stack *kstacks[KSTACK_MAX];
 /**@}*/
 
 /**
@@ -194,9 +199,9 @@ PRIVATE struct thread * thread_schedule_next(void)
 */
 PUBLIC void thread_schedule(struct thread * t)
 {
-	/* Valid user thread. */
-	KASSERT(WITHIN(t, &user_threads[0], &user_threads[THREAD_MAX]));
-
+	/* Valid thread. */
+	KASSERT(!WITHIN(t, &idle_threads[0], &idle_threads[KTHREAD_IDLE_MAX]));
+	KASSERT(t != KTHREAD_MASTER);
 	KASSERT(t->state != THREAD_RUNNING);
 
 	/* Reconfigure the thread. */
@@ -559,7 +564,7 @@ PRIVATE NORETURN void thread_idle(void)
 	thread_lock_tm(&guard);
 
 		/* Lifecycle of idle thread. */
-		while (UNLIKELY(!tm_shutdown))
+		while (LIKELY(!tm_shutdown))
 		{
 			thread_unlock_tm(&guard);
 				kevent_wait(KEVENT_WAKEUP);
@@ -768,6 +773,13 @@ error0:
  * Thread Manager Initialization                                              *
  *============================================================================*/
 
+/**
+ * @name Imported definitions.
+ */
+/**@{*/
+EXTERN void task_loop(void);
+/**@}*/
+
 /*============================================================================*
  * __thread_init()                                                            *
  *============================================================================*/
@@ -782,10 +794,8 @@ PUBLIC void __thread_init(void)
 	struct thread * idle;
 
 	/* Sanity checks. */
-	KASSERT(KTHREAD_IDLE_MAX == (SYS_THREAD_MAX - 1));
 	KASSERT(KTHREAD_IDLE_MAX == (CORES_NUM - 1));
-	KASSERT(THREAD_MAX == THREAD_MAX);
-	KASSERT(nthreads == 1);
+	KASSERT(nthreads == KTHREAD_SERVICE_MAX);
 
 	/* Configure schedule queues. */
 	scheduling = RESOURCE_ARRANGEMENT_INITIALIZER;
@@ -796,12 +806,15 @@ PUBLIC void __thread_init(void)
 	/* Spawn idle threads. */
 	for (int coreid = 1; coreid <= KTHREAD_IDLE_MAX; coreid++)
 	{
-		KASSERT((idle = thread_alloc()) != NULL);
+		/* Thread should be the same of the getted by the macro. */
+		KASSERT((idle = KTHREAD_IDLE(coreid)) != NULL);
 
-		/* Get thread ID. */
-		KASSERT((idle->tid = next_tid++) == coreid);
+		/* Sanity checks. */
+		KASSERT(idle == &threads[KTHREAD_SERVICE_MAX + (coreid - 1)]);
+		KASSERT(idle == &idle_threads[(coreid - 1)]);
 
 		/* Initialize thread structure. */
+		idle->tid           = next_tid++;
 		idle->coreid        = coreid;
 		idle->state         = THREAD_RUNNING;
 		idle->affinity      = KTHREAD_AFFINITY_FIXED(coreid);
@@ -813,11 +826,9 @@ PUBLIC void __thread_init(void)
 		/* Sets running thread. */
 		curr_threads[coreid] = idle;
 
-		/* Thread id should be the same of coreid. */
-		KASSERT(KERNEL_THREAD_ID(idle) == thread_get_coreid(idle));
-
-		/* Affinity should only be with the coreid. */
+		/* Affinity should only be with the coreid and tid must be pre-known. */
 		KASSERT(idle->affinity == (1 << coreid));
+		KASSERT(idle->tid      == (KTHREAD_SERVICE_MAX + (coreid - 1)));
 
 		/*
 		 * We should do some busy waitting here. When the kernel is under
@@ -837,6 +848,41 @@ PUBLIC void __thread_init(void)
 		/* Idle successfuly created. */
 		KASSERT(ret == 0);
 	}
+
+#if __NANVIX_USE_TASKS
+
+	/**
+	 * Create Dispatcher thread.
+	 */
+
+		/* Gets the dispatcher thread. */
+		struct thread * dispatcher = KTHREAD_DISPATCHER;
+
+		/* Initialize thread structure. */
+		KASSERT(dispatcher->coreid   == KTHREAD_DISPATCHER_CORE);
+		KASSERT(dispatcher->affinity == KTHREAD_AFFINITY_FIXED(KTHREAD_DISPATCHER_CORE));
+		dispatcher->state = THREAD_READY;
+
+		/* Allocate stacks to the thread. */
+		KASSERT((ustacks[KSTACK_MAX - 1] = (struct stack *) kpage_get(1)) != NULL);
+		KASSERT((kstacks[KSTACK_MAX - 2] = (struct stack *) kpage_get(1)) != NULL);
+
+		/* Create initial context of the thread. */
+		KASSERT((dispatcher->ctx =
+			context_create(
+				task_loop,
+				ustacks[KSTACK_MAX - 1],
+				kstacks[KSTACK_MAX - 2]
+			)
+		) != NULL);
+
+		/* Puts thread in the schedule queue. */
+		thread_schedule(dispatcher);
+
+		/* Wakeup the dispatcher thread.*/
+		kevent_notify(KEVENT_SCHED, KTHREAD_DISPATCHER_CORE);
+
+#endif /* __NANVIX_USE_TASKS */
 }
 
 #endif /* CLUSTER_IS_MULTICORE && CORE_SUPPORTS_MULTITHREADING */

@@ -28,10 +28,13 @@
  * Global Variables                                                           *
  *============================================================================*/
 
-/*
- * Import definitions.
+/**
+ * @name Imported definitions.
  */
+/**@{*/
 EXTERN void kmain(int argc, const char *argv[]);
+EXTERN void task_loop(void);
+/**@}*/
 
 /**
  * @brief Thread table.
@@ -47,7 +50,20 @@ EXTENSION PUBLIC struct thread threads[KTHREAD_MAX] = {
 		.arg      = NULL,
 		.start    = (void *) kmain,
 		.ctx      = NULL,
+	},
+#if __NANVIX_USE_TASKS
+	[1] = {
+		.resource = RESOURCE_STATIC_INITIALIZER,
+		.tid      = KTHREAD_DISPATCHER_TID,
+		.coreid   = KTHREAD_DISPATCHER_CORE,
+		.state    = THREAD_RUNNING,
+		.affinity = KTHREAD_AFFINITY_FIXED(KTHREAD_DISPATCHER_CORE),
+		.age      = 0ULL,
+		.arg      = NULL,
+		.start    = (void *) task_loop,
+		.ctx      = NULL,
 	}
+#endif
 };
 
 /**
@@ -272,7 +288,7 @@ PUBLIC struct thread * thread_get(int tid)
  */
 PUBLIC struct thread * thread_alloc(void)
 {
-	for (int i = 1; i < KTHREAD_MAX; i++)
+	for (int i = SYS_THREAD_MAX; i < KTHREAD_MAX; i++)
 	{
 		/* Verify the state of the thread. */
 		switch (threads[i].state)
@@ -495,7 +511,7 @@ PUBLIC void thread_init(void)
 	curr_threads[0] = &threads[0];
 
 	/* Initializes user threads. */
-	for (int i = 1; i < KTHREAD_MAX; ++i)
+	for (int i = KTHREAD_SERVICE_MAX; i < KTHREAD_MAX; ++i)
 	{
 		threads[i].resource = RESOURCE_INITIALIZER;
 		threads[i].tid      = KTHREAD_NULL_TID;
@@ -518,10 +534,10 @@ PUBLIC void thread_init(void)
 		cond_init(&joincond[i]);
 
 	/** Init number of running threads. */
-	nthreads = 1;
+	nthreads = KTHREAD_SERVICE_MAX;
 
 	/* Init next thread ID. */
-	next_tid = (KTHREAD_MASTER_TID + 1);
+	next_tid = KTHREAD_SERVICE_MAX;
 
 	/* Init thread manager locks. */
 	spinlock_init(&lock_tm);

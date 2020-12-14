@@ -235,13 +235,6 @@
 #if CORE_SUPPORTS_MULTITHREADING
 
 	/**
-	 * @brief Number of idle threads.
-	 *
-	 * @details Master + Idles == SYS_THREAD_MAX.
-	 */
-	#define KTHREAD_IDLE_MAX (SYS_THREAD_MAX - 1)
-
-	/**
 	 * @name Getters of subset of threads.
 	 *
 	 * @details The threads array is composed by:
@@ -250,7 +243,7 @@
 	 * - [SYS_THREAD_MAX, KTHREAD_MAX] = User threads
 	 */
 	/**@{*/
-	#define idle_threads (KTHREAD_MASTER + 1)
+	#define idle_threads (KTHREAD_MASTER + KTHREAD_SERVICE_MAX)
 	#define user_threads (KTHREAD_MASTER + SYS_THREAD_MAX)
 	/**@}*/
 
@@ -267,7 +260,16 @@
 	 *
 	 * @warning Not use core 0 because it is not a idle thread.
 	 */
-	#define KTHREAD_IDLE(coreid) ((coreid > 0) ? &threads[coreid] : NULL)
+	#define KTHREAD_IDLE(coreid) ((coreid > 0) ? &idle_threads[(coreid - 1)] : NULL)
+
+#if __NANVIX_USE_TASKS
+
+	/**
+	 * @brief Dispatcher core.
+	 */
+	#define KTHREAD_DISPATCHER_CORE (CORES_NUM - 1)
+
+#endif /* __NANVIX_USE_TASKS */
 
 	/**
 	 * @brief Insert a new thread into the scheduling queue.
