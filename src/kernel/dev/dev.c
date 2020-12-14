@@ -61,7 +61,13 @@ PRIVATE void do_timer(int num)
 		dcache_invalidate();
 
 #if CORE_SUPPORTS_MULTITHREADING
+		/* Runs thread manager algorithm. */
 		thread_manager();
+#endif
+
+#if __NANVIX_USE_TASKS
+		/* Notify system tick. */
+		task_tick();
 #endif
 	}
 }
