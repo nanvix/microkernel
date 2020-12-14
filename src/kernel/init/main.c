@@ -96,6 +96,10 @@ PUBLIC void kmain(int argc, const char *argv[])
 	network_setup();
 #endif
 
+#if __NANVIX_USE_TASKS
+	task_init();
+#endif
+
 	thread_init();
 
 	kprintf("[kernel][dev] enabling hardware interrupts");
