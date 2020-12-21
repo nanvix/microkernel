@@ -84,7 +84,7 @@ PUBLIC void __thread_free(struct thread *t)
  *============================================================================*/
 
 /**
- * @brief Sets a new 
+ * @brief Sets a new
  *
  * @param new_affinity New affinity value.
  *
@@ -134,9 +134,6 @@ PUBLIC int thread_set_affinity(struct thread * t, int new_affinity)
  */
 PRIVATE void thread_switch_to(struct context ** previous, struct context ** next)
 {
-	/* Invalid thread. */
-	KASSERT(thread_get_curr_id() != KTHREAD_MASTER_TID);
-
 	/* Does a thread try to switch to itself? */
 	KASSERT(previous != next);
 
@@ -201,7 +198,6 @@ PUBLIC void thread_schedule(struct thread * t)
 {
 	/* Valid thread. */
 	KASSERT(!WITHIN(t, &idle_threads[0], &idle_threads[KTHREAD_IDLE_MAX]));
-	KASSERT(t != KTHREAD_MASTER);
 	KASSERT(t->state != THREAD_RUNNING);
 
 	/* Reconfigure the thread. */
@@ -317,19 +313,14 @@ PUBLIC int thread_yield(void)
 	struct thread * next;       /* Next Thread.    */
 	struct section_guard guard; /* Section guard.  */
 
-	curr = thread_get_curr();
-
-	/* Kernel thread do not yield. */
-	if (thread_get_id(curr) == KTHREAD_MASTER_TID)
-		return (-EINVAL);
-
-	coreid = core_get_id();
-	idle   = KTHREAD_IDLE(coreid);
-
 	/* Prevent this call be preempted by any maskable interrupt. */
 	section_guard_init(&guard, &lock_tm, INTERRUPT_LEVEL_NONE);
 
 	thread_lock_tm(&guard);
+
+		curr   = thread_get_curr();
+		coreid = core_get_id();
+		idle   = KTHREAD_IDLE(coreid);
 
 	/**
 	 * Gets next thread.
@@ -449,14 +440,16 @@ PUBLIC void do_thread_schedule(bool is_aging)
 {
 	int coreid;                         /* Current core ID.    */
 	int nodeid;                         /* Current helper ID.  */
+	int mycoreid;                       /* Current core ID.    */
 	bool do_schedule;                   /* Need to schedule?   */
 	struct tnode * older;               /* Older node pointer. */
 	struct tnode nodes[CORES_NUM];      /* List Helpers.       */
 	struct resource_arrangement olders; /* List of olders.     */
 
 	/* Initialize priority queue. */
-	olders = RESOURCE_ARRANGEMENT_INITIALIZER;
-	nodeid = 0;
+	olders   = RESOURCE_ARRANGEMENT_INITIALIZER;
+	nodeid   = 0;
+	mycoreid = core_get_id();
 
 	do_schedule = (scheduling.size != 0);
 
@@ -465,7 +458,7 @@ PUBLIC void do_thread_schedule(bool is_aging)
 		return;
 
 	/* Find the older thread per coreid. */
-	for (int i = 1; i < CORES_NUM; ++i)
+	for (int i = 0; i < CORES_NUM; ++i)
 	{
 		/* Update thread age. */
 		if (is_aging)
@@ -499,18 +492,25 @@ PUBLIC void do_thread_schedule(bool is_aging)
 			/* Gets the target coreid. */
 			coreid = thread_get_coreid(older->thread);
 
-			/* Sets the desired affinity to the target core. */
-			thread_desired_affinity = KTHREAD_AFFINITY_FIXED(coreid);
-
 			/* Do not notify itself. */
-			if (coreid == core_get_id())
-				continue;
-
-			/* Did find any thread that fit into the target core? */
-			if (resource_search_verify(&scheduling, thread_choose) >= 0)
+			if (UNLIKELY(coreid == mycoreid))
 			{
-				KASSERT(kevent_notify(KEVENT_SCHED, coreid) == 0);
-				break;
+				spinlock_unlock(&lock_tm);
+					thread_yield();
+				spinlock_lock(&lock_tm);
+			}
+
+			else
+			{
+				/* Sets the desired affinity to the target core. */
+				thread_desired_affinity = KTHREAD_AFFINITY_FIXED(coreid);
+
+				/* Did find any thread that fit into the target core? */
+				if (resource_search_verify(&scheduling, thread_choose) >= 0)
+				{
+					KASSERT(kevent_notify(KEVENT_SCHED, coreid) == 0);
+					break;
+				}
 			}
 		}
 	}
@@ -545,7 +545,7 @@ PUBLIC void thread_manager(void)
 * The idle thread finish when it is wake up but there is no user thread to
 * schedule.
 */
-PRIVATE NORETURN void thread_idle(void)
+PUBLIC void thread_idle(void)
 {
 	struct thread * idle;       /* Idle Thread.   */
 	struct section_guard guard; /* Section guard. */
@@ -777,6 +777,7 @@ error0:
  * @name Imported definitions.
  */
 /**@{*/
+EXTERN void _kmain(void);
 EXTERN void task_loop(void);
 /**@}*/
 
@@ -794,7 +795,7 @@ PUBLIC void __thread_init(void)
 	struct thread * idle;
 
 	/* Sanity checks. */
-	KASSERT(KTHREAD_IDLE_MAX == (CORES_NUM - 1));
+	KASSERT(KTHREAD_IDLE_MAX == CORES_NUM);
 	KASSERT(nthreads == KTHREAD_SERVICE_MAX);
 
 	/* Configure schedule queues. */
@@ -804,14 +805,14 @@ PUBLIC void __thread_init(void)
 	KASSERT(kevent_set_handler(KEVENT_SCHED, thread_handler) == 0);
 
 	/* Spawn idle threads. */
-	for (int coreid = 1; coreid <= KTHREAD_IDLE_MAX; coreid++)
+	for (int coreid = 0; coreid < KTHREAD_IDLE_MAX; coreid++)
 	{
 		/* Thread should be the same of the getted by the macro. */
 		KASSERT((idle = KTHREAD_IDLE(coreid)) != NULL);
 
 		/* Sanity checks. */
-		KASSERT(idle == &threads[KTHREAD_SERVICE_MAX + (coreid - 1)]);
-		KASSERT(idle == &idle_threads[(coreid - 1)]);
+		KASSERT(idle == &threads[KTHREAD_SERVICE_MAX + coreid]);
+		KASSERT(idle == &idle_threads[coreid]);
 
 		/* Initialize thread structure. */
 		idle->tid           = next_tid++;
@@ -828,7 +829,11 @@ PUBLIC void __thread_init(void)
 
 		/* Affinity should only be with the coreid and tid must be pre-known. */
 		KASSERT(idle->affinity == (1 << coreid));
-		KASSERT(idle->tid      == (KTHREAD_SERVICE_MAX + (coreid - 1)));
+		KASSERT(idle->tid      == (KTHREAD_SERVICE_MAX + coreid));
+
+		/* Core master is already running the idle thread. */
+		if (coreid == COREID_MASTER)
+			continue;
 
 		/*
 		 * We should do some busy waitting here. When the kernel is under
@@ -849,6 +854,34 @@ PUBLIC void __thread_init(void)
 		KASSERT(ret == 0);
 	}
 
+	/**
+	 * Create master thread.
+	 */
+
+		/* Gets the dispatcher thread. */
+		struct thread * master = KTHREAD_MASTER;
+
+		/* Initialize thread structure. */
+		KASSERT(master->coreid   == COREID_MASTER);
+		KASSERT(master->affinity == KTHREAD_AFFINITY_MASTER);
+		master->state = THREAD_READY;
+
+		/* Allocate stacks to the thread. */
+		KASSERT((ustacks[KSTACK_MAX - 1] = (struct stack *) kpage_get(1)) != NULL);
+		KASSERT((kstacks[KSTACK_MAX - 2] = (struct stack *) kpage_get(1)) != NULL);
+
+		/* Create initial context of the thread. */
+		KASSERT((master->ctx =
+			context_create(
+				_kmain,
+				ustacks[KSTACK_MAX - 1],
+				kstacks[KSTACK_MAX - 2]
+			)
+		) != NULL);
+
+		/* Puts thread in the schedule queue. */
+		thread_schedule(master);
+
 #if __NANVIX_USE_TASKS
 
 	/**
@@ -864,15 +897,15 @@ PUBLIC void __thread_init(void)
 		dispatcher->state = THREAD_READY;
 
 		/* Allocate stacks to the thread. */
-		KASSERT((ustacks[KSTACK_MAX - 1] = (struct stack *) kpage_get(1)) != NULL);
-		KASSERT((kstacks[KSTACK_MAX - 2] = (struct stack *) kpage_get(1)) != NULL);
+		KASSERT((ustacks[KSTACK_MAX - 3] = (struct stack *) kpage_get(1)) != NULL);
+		KASSERT((kstacks[KSTACK_MAX - 4] = (struct stack *) kpage_get(1)) != NULL);
 
 		/* Create initial context of the thread. */
 		KASSERT((dispatcher->ctx =
 			context_create(
 				task_loop,
-				ustacks[KSTACK_MAX - 1],
-				kstacks[KSTACK_MAX - 2]
+				ustacks[KSTACK_MAX - 3],
+				kstacks[KSTACK_MAX - 4]
 			)
 		) != NULL);
 

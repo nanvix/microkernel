@@ -86,11 +86,8 @@ PUBLIC void thread_asleep(
 
 #else /* CORE_SUPPORTS_MULTITHREADING */
 
-		/* Master thread do not leave the core. */
-		if (curr == KTHREAD_MASTER)
-			kevent_wait(KEVENT_WAKEUP);
-		else
-			thread_yield();
+		/* Leave the core. */
+		thread_yield();
 
 #endif /* CORE_SUPPORTS_MULTITHREADING */
 
@@ -134,21 +131,13 @@ PUBLIC void thread_wakeup(struct thread *t)
 		thread_lock_tm(&guard);
 	}
 
-		/* Wake up master thread. */
-		if (t == KTHREAD_MASTER)
-			kevent_notify(KEVENT_WAKEUP, COREID_MASTER);
-
-		/* Wake up user thread. */
-		else
-		{
-			/* Insert the thread on the scheduling queue. */
-			thread_schedule(t);
+		/* Insert the thread on the scheduling queue. */
+		thread_schedule(t);
 
 #if 0
-			/* Verify if it can be already scheduled. */
-			do_thread_schedule(false);
+		/* Verify if it can be already scheduled. */
+		do_thread_schedule(false);
 #endif
-		}
 
 	if (state != THREAD_TERMINATED)
 		thread_unlock_tm(&guard);

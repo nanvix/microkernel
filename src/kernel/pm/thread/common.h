@@ -260,7 +260,7 @@
 	 *
 	 * @warning Not use core 0 because it is not a idle thread.
 	 */
-	#define KTHREAD_IDLE(coreid) ((coreid > 0) ? &idle_threads[(coreid - 1)] : NULL)
+	#define KTHREAD_IDLE(coreid) (&idle_threads[coreid])
 
 #if __NANVIX_USE_TASKS
 

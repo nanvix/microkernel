@@ -68,6 +68,26 @@ PRIVATE void *init(void *arg)
 	return (NULL);
 }
 
+PUBLIC void _kmain(void)
+{
+#if (CLUSTER_IS_MULTICORE)
+	int tid;
+	thread_create(&tid, init, NULL);
+#endif
+
+	kprintf("[kernel][dev] enabling hardware interrupts");
+	interrupts_enable();
+
+#if (CLUSTER_IS_MULTICORE)
+	while (true)
+		do_kcall2();
+#endif
+}
+
+#if (CORE_SUPPORTS_MULTITHREADING)
+	EXTERN NORETURN void thread_idle(void);
+#endif /* CORE_SUPPORTS_MULTITHREADING */
+
 #endif
 
 /**
@@ -75,10 +95,6 @@ PRIVATE void *init(void *arg)
  */
 PUBLIC void kmain(int argc, const char *argv[])
 {
-#if (CLUSTER_IS_MULTICORE)
-	int tid;
-#endif
-
 	UNUSED(argc);
 	UNUSED(argv);
 
@@ -102,18 +118,19 @@ PUBLIC void kmain(int argc, const char *argv[])
 
 	thread_init();
 
-	kprintf("[kernel][dev] enabling hardware interrupts");
-	interrupts_enable();
+#if (CORE_SUPPORTS_MULTITHREADING)
 
-#if (CLUSTER_IS_MULTICORE)
-	thread_create(&tid, init, NULL);
-	while (true)
-		do_kcall2();
+	/* Schedule master thread. */
+	thread_idle();
+
 #else
+
+	/* Run main behaviour. */
+	_kmain();
+
+#endif
 
 	/* Power down. */
 	kernel_shutdown();
 	UNREACHABLE();
-
-#endif
 }

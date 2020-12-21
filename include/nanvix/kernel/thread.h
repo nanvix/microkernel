@@ -61,9 +61,9 @@
 	 * (CORES_NUM - 1) idle threads to occupy the core idle time.
 	 */
 	#if CORE_SUPPORTS_MULTITHREADING
-		#define KTHREAD_IDLE_MAX (CORES_NUM - 1) /**< CORES_NUM - Master thread. */
+		#define KTHREAD_IDLE_MAX (CORES_NUM) /**< CORES_NUM - Master thread. */
 	#else
-		#define KTHREAD_IDLE_MAX (0)             /**< There is not idle thread.  */
+		#define KTHREAD_IDLE_MAX (0)         /**< There is not idle thread.  */
 	#endif
 
 	/**
