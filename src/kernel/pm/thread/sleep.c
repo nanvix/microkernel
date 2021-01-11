@@ -49,8 +49,17 @@ PUBLIC void thread_asleep(
 	spinlock_t * user_lock
 )
 {
+	int intlvl;
+	bool changed;
 	struct thread * curr;
 	struct section_guard guard; /* Section guard. */
+
+	/* Does the current level has a lower priority than the new one? */
+	changed = (INTERRUPT_LEVEL_NONE > interrupts_get_level());
+
+	/* Sets new interrupt level and keeps the old level. */
+	if (changed)
+		KASSERT((intlvl = interrupts_set_level(INTERRUPT_LEVEL_NONE)) >= 0);
 
 	spinlock_lock(queue_lock);
 
@@ -93,6 +102,10 @@ PUBLIC void thread_asleep(
 
 	/* Lock the user critical region. */
 	spinlock_lock(user_lock);
+
+	/* Restore interrupt level. */
+	if (changed)
+		KASSERT((interrupts_set_level(intlvl)) >= 0);
 }
 
 /*============================================================================*
