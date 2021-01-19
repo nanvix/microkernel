@@ -839,6 +839,16 @@
 	EXTERN void task_tick(void);
 
 	/**
+	 * @brief Emit a task to the target core operate.
+	 *
+	 * @param task   Task pointer.
+	 * @param coreid Core ID.
+	 *
+	 * @returns Zero if successfully emit the task, non-zero otherwise.
+	 */
+	EXTERN int task_emit(struct task * task, int coreid);
+
+	/**
 	 * @brief Initializes task system.
 	 */
 	EXTERN void task_init(void);

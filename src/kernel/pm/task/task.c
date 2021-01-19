@@ -29,6 +29,8 @@
 
 #if __NANVIX_USE_TASKS
 
+#include <nanvix/kernel/event.h>
+
 /*============================================================================*
  * Task system variables                                                      *
  *============================================================================*/
@@ -71,26 +73,27 @@ PRIVATE struct task_board
 	 * @name Control.
 	 */
 	/**@{*/
-	uint64_t counter;                       /**< New task ID control.   */
-	spinlock_t lock;                        /**< Board protection.      */
-	struct semaphore sem;                   /**< Actives tasks control. */
+	uint64_t counter;                                 /**< New task ID control.   */
+	spinlock_t lock;                                  /**< Board protection.      */
+	struct semaphore sem;                             /**< Actives tasks control. */
 	/**@}*/
 
 	/**
 	 * @name Tracked Tasks.
 	 */
 	/**@{*/
-	struct resource_arrangement actives;    /**< Ready tasks.           */
-	struct resource_arrangement waiting;    /**< Blocked tasks.         */
-	struct resource_arrangement periodics;  /**< Periodic tasks.        */
+	struct resource_arrangement actives;              /**< Ready tasks.           */
+	struct resource_arrangement emissions[CORES_NUM]; /**< Emitted tasks.         */
+	struct resource_arrangement waiting;              /**< Blocked tasks.         */
+	struct resource_arrangement periodics;            /**< Periodic tasks.        */
 	/**@}*/
 
 	/**
 	 * @name Nodes control.
 	 */
 	/**@{*/
-	struct resource_arrangement free_nodes; /**< Free nodes.           */
-	struct node_task nodes[NODE_TASK_MAX];  /**< Nodes.                */
+	struct resource_arrangement free_nodes;           /**< Free nodes.           */
+	struct node_task nodes[NODE_TASK_MAX];            /**< Nodes.                */
 	/**@}*/
 } tasks ALIGN(CACHE_LINE_SIZE);
 
@@ -793,6 +796,163 @@ PUBLIC void task_tick(void)
 }
 
 /*============================================================================*
+ * User Behaviors                                                             *
+ *============================================================================*/
+
+/*============================================================================*
+ * task_handler()                                                             *
+ *============================================================================*/
+
+/**
+ * @brief Handle scheduling kernel events.
+ */
+PRIVATE void task_handler(int evnum)
+{
+	int ret;
+	int coreid;
+	struct task * task;
+	struct section_guard guard;
+	struct resource_arrangement * emissions;
+
+	KASSERT(evnum == KEVENT_TASK);
+
+	coreid    = core_get_id();
+	emissions = &tasks.emissions[coreid];
+
+	/* We do not want to be interrupted in the critical region. */
+	section_guard_init(&guard, &tasks.lock, INTERRUPT_LEVEL_NONE);
+	section_guard_entry(&guard);
+
+	/* Endless loop. */
+	while (LIKELY((task = TASK_PTR(resource_dequeue(emissions))) != NULL))
+	{
+			task->state = TASK_STATE_RUNNING;
+
+		section_guard_exit(&guard);
+
+		/* Valid function. */
+		KASSERT(task->fn != NULL);
+
+		/* Execute the function of the task. */
+		ret = task->fn(&task->args);
+
+		/* Valid return. */
+		KASSERT(WITHIN(ret, TASK_RET_ERROR, TASK_RET_STOP + 1));
+
+		section_guard_entry(&guard);
+
+			/* Evaluate the return type. */
+			switch (ret)
+			{
+				/* Complete the task. */
+				case TASK_RET_SUCCESS:
+				{
+					task->state = TASK_STATE_COMPLETED;
+					semaphore_up(&task->sem);
+				} break;
+
+				/* Not supported returns. */
+				default:
+					kpanic("[task][handler] Returns not supported!");
+					break;
+			}
+
+			task = NULL;
+	}
+
+	section_guard_exit(&guard);
+}
+
+
+/*============================================================================*
+ * __task_emit()                                                              *
+ *============================================================================*/
+
+/**
+ * @brief Emit a task to the target core operate.
+ *
+ * @param task   Task pointer.
+ * @param coreid Core ID.
+ *
+ * @returns Zero if successfully register the task, non-zero otherwise.
+ */
+PRIVATE void __task_emit(struct task * task, int coreid)
+{
+	if (task->id == TASK_NULL_ID)
+		task->id = tasks.counter++;
+#if 0
+	/* Must we verify if the task is out of the task system? */
+	else
+		KASSERT(task->state == (READY | COMPLETE))
+#endif
+
+	/* Is a periodic task? */
+	if (task->period > 0)
+		kpanic("[task] Periodic tasks are not yet supported in emissions!");
+
+	/* Does the task have parents or children? */
+	if (task->parents != 0 || task->children.size != 0)
+		kpanic("[task] Periodic tasks are not yet supported in emissions!");
+
+	/* Change task state to ready. */
+	task->state = TASK_STATE_READY;
+
+	/* Active task. */
+	KASSERT(resource_enqueue(&tasks.emissions[coreid], &task->resource) == 0);
+}
+
+/*============================================================================*
+ * task_create()                                                              *
+ *============================================================================*/
+
+/**
+ * @brief Emit a task to the target core operate.
+ *
+ * @param task   Task pointer.
+ * @param coreid Core ID.
+ *
+ * @returns Zero if successfully emit the task, non-zero otherwise.
+ */
+PUBLIC int task_emit(struct task * task, int coreid)
+{
+	struct section_guard guard;
+
+	/* Invalid task. */
+	if (UNLIKELY(!task))
+		return (-EINVAL);
+
+	/* Invalid core. */
+	if (UNLIKELY(!WITHIN(coreid, 0, CORES_NUM)))
+		return (-EINVAL);
+
+	section_guard_init(&guard, &tasks.lock, INTERRUPT_LEVEL_NONE);
+
+	/* Dispatch task. */
+	section_guard_entry(&guard);
+		__task_emit(task, coreid);
+	section_guard_exit(&guard);
+
+	/* Notify emit events. */
+	if (core_get_id() != coreid)
+	{
+		KASSERT(kevent_notify(KEVENT_TASK, coreid) == 0);
+	}
+
+	/* Handle the task. */
+	else
+	{
+		task_handler(KEVENT_TASK);
+	}
+
+	/* Success. */
+	return (0);
+}
+
+/*============================================================================*
+ * Initialization                                                             *
+ *============================================================================*/
+
+/*============================================================================*
  * task_init()                                                                *
  *============================================================================*/
 
@@ -810,6 +970,9 @@ PUBLIC void task_init(void)
 	tasks.periodics  = RESOURCE_ARRANGEMENT_INITIALIZER;
 	tasks.free_nodes = RESOURCE_ARRANGEMENT_INITIALIZER;
 
+	for (int i = 0; i < CORES_NUM; ++i)
+		tasks.emissions[i] = RESOURCE_ARRANGEMENT_INITIALIZER;
+
 	for (int i = 0; i < NODE_TASK_MAX; ++i)
 	{
 		tasks.nodes[i].resource = RESOURCE_INITIALIZER;
@@ -818,6 +981,9 @@ PUBLIC void task_init(void)
 
 	spinlock_init(&tasks.lock);
 	semaphore_init(&tasks.sem, 0);
+
+	/* Set task handler. */
+	KASSERT(kevent_set_handler(KEVENT_TASK, task_handler) == 0);
 }
 
 #endif /* __NANVIX_USE_TASKS */

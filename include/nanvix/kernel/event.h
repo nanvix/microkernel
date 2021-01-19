@@ -46,6 +46,8 @@
 	/**@{*/
 	#define KEVENT_WAKEUP 0 /**< Wake up.    */
 	#define KEVENT_SCHED  1 /**< Scheduling. */
+	#define KEVENT_TASK   2 /**< Task.       */
+	#define _KEVENT_LIMIT 3 /**< Limit.      */
 	/**@}*/
 
 	/**
@@ -54,7 +56,7 @@
 	 * @note Must be updated every time that a new event type is added.
 	 */
 	/**@}*/
-	#define KEVENT_NUM 2
+	#define KEVENT_NUM _KEVENT_LIMIT 
 	/**@}*/
 
 	/**

@@ -388,6 +388,13 @@ PUBLIC void do_kcall2(void)
 			);
 			break;
 
+		case NR_task_emit:
+			ret = task_emit(
+				(struct task *) sysboard[coreid].arg0,
+				(int) sysboard[coreid].arg1
+			);
+			break;
+
 		case NR_task_continue:
 			ret = task_continue(
 				(struct task *) sysboard[coreid].arg0
