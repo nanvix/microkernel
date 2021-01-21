@@ -401,6 +401,8 @@ PUBLIC int do_kcall(
 
 	coreid = core_get_id();
 
+	UNUSED(affinity);
+
 	/* Parse system call number. */
 	switch (syscall_nr)
 	{
