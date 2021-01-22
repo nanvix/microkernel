@@ -55,7 +55,9 @@ PUBLIC void thread_asleep(
 
 		/* Asleep was called from outside the thread system. */
 		if (&lock_tm != user_lock)
+		{
 			spinlock_lock(&lock_tm);
+		}
 
 			/* Stop current thread. */
 			curr        = thread_get_curr();
@@ -65,7 +67,9 @@ PUBLIC void thread_asleep(
 			resource_enqueue(queue, &curr->resource);
 
 		if (&lock_tm != user_lock)
+		{
 			spinlock_unlock(&lock_tm);
+		}
 
 	spinlock_unlock(queue_lock);
 
