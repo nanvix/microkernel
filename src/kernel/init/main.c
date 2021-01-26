@@ -118,6 +118,8 @@ PUBLIC void kmain(int argc, const char *argv[])
 
 	thread_init();
 
+	tlb_shootdown_config();
+
 #if (CORE_SUPPORTS_MULTITHREADING)
 
 	/* Schedule master thread. */

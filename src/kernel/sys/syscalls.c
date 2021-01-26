@@ -563,6 +563,16 @@ PUBLIC int do_kcall(
 
 #endif
 
+#if CLUSTER_HAS_TLB_SHOOTDOWN
+
+		case NR_tlb_shootdown:
+			ret = kernel_tlb_shootdown(
+				(vaddr_t) arg0
+			);
+			break;
+
+#endif
+
 #if __NANVIX_USE_TASKS
 
 		case NR_task_wait:

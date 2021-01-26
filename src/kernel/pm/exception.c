@@ -39,7 +39,7 @@ PRIVATE spinlock_t lock;
 /**
  * @brief Lock for user-space handler.
  */
-PRIVATE spinlock_t ulock;
+PRIVATE struct semaphore ulock;
 
 /**
  * @brief Current exception being handled.
@@ -67,7 +67,7 @@ PRIVATE struct
 	{
 		struct thread *thread;        /**< Thread                          */
 		const struct exception *excp; /**< Information About the Exception */
-		spinlock_t lock;              /**< Kernel-Space Lock               */
+		struct semaphore lock;        /**< Kernel-Space Lock               */
 	} waiting[THREAD_MAX] ALIGN(sizeof(dword_t));
 } kexceptions[EXCEPTIONS_NUM];
 
@@ -153,7 +153,7 @@ found:
 		while (!exception_grab())
 		{
 			spinlock_unlock(&lock);
-			spinlock_lock(&ulock);
+				semaphore_down(&ulock);
 			spinlock_lock(&lock);
 		}
 
@@ -197,7 +197,7 @@ PUBLIC int exception_resume(void)
 
 		kexceptions[handling.excpnum].waiting[handling.coreid].thread = NULL;
 		kexceptions[handling.excpnum].waiting[handling.coreid].excp = NULL;
-		spinlock_unlock(&kexceptions[handling.excpnum].waiting[handling.coreid].lock);
+		semaphore_up(&kexceptions[handling.excpnum].waiting[handling.coreid].lock);
 
 		handling.excpnum = -1;
 		handling.coreid = -1;
@@ -246,8 +246,8 @@ PUBLIC int exception_wait(int excpnum, const struct exception *excp)
 	 * user-space from exception_pause() and then come back by calling
 	 * exception_resume().
 	 */
-	spinlock_unlock(&ulock);
-	spinlock_lock(&kexceptions[excpnum].waiting[coreid].lock);
+	semaphore_up(&ulock);
+	semaphore_down(&kexceptions[excpnum].waiting[coreid].lock);
 
 	return (0);
 }
@@ -269,13 +269,11 @@ PUBLIC void exception_init(void)
 		for (int j = 0; j < THREAD_MAX; j++)
 		{
 			kexceptions[i].waiting[j].thread = NULL;
-			spinlock_init(&kexceptions[i].waiting[j].lock);
-			spinlock_lock(&kexceptions[i].waiting[j].lock);
+			semaphore_init(&kexceptions[i].waiting[j].lock, 0);
 		}
 	}
 
-	spinlock_init(&ulock);
-	spinlock_lock(&ulock);
+	semaphore_init(&ulock, 0);
 	handling.excpnum = -1;
 	handling.coreid = -1;
 

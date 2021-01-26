@@ -40,6 +40,67 @@
 #endif
 
 /*============================================================================*
+ * TLB Shootdown Helpers                                                      *
+ *============================================================================*/
+
+/**
+ * @brief TLB Shootdown Helper.
+ */
+#if (CLUSTER_HAS_HW_TLB_SHOOTDOWN)
+	PRIVATE tlb_shootdown_fn __tlb_shootdown = tlb_shootdown;
+#else
+	/**
+	 * @brief Dummy TLB shootdown function.
+	 */
+	PRIVATE int tlb_shootdown_dummy(vaddr_t vaddr)
+	{
+		kprintf("[kernel][mm] cannot shootdown %x", vaddr);
+		return (0);
+	}
+
+	PRIVATE tlb_shootdown_fn __tlb_shootdown = tlb_shootdown_dummy;
+#endif
+
+/*============================================================================*
+ * tlb_set_shootdown_function()                                               *
+ *============================================================================*/
+
+/**
+ * @brief Sets the TLB shootdown method.
+ *
+ * @param fn Function pointer.
+ *
+ * @returns Upon successful completion, zero is returned. Upon failure,
+ * negative numver is returned instead.
+ */
+PUBLIC int tlb_set_shootdown_function(tlb_shootdown_fn fn)
+{
+	if (UNLIKELY(fn == NULL))
+		return (-EINVAL);
+
+	__tlb_shootdown = fn;
+
+	return (0);
+}
+
+/**
+ * @brief Invalidates the TLB entry that encodes the virtual address @p
+ * addr in all cores.
+ *
+ * @param vaddr Virtual address that represents the TLB entry.
+ *
+ * @returns Upon successful completion, zero is returned. Upon failure,
+ * negative numver is returned instead.
+ */
+PUBLIC int _tlb_shootdown(vaddr_t vaddr)
+{
+	if (UNLIKELY(!mm_is_uaddr(vaddr)))
+		return (-EINVAL);
+
+	return (__tlb_shootdown(vaddr));
+}
+
+/*============================================================================*
  * pgtab_map()                                                                *
  *============================================================================*/
 
@@ -229,11 +290,7 @@ PUBLIC int upage_inval(vaddr_t vaddr)
 	KASSERT(tlb_inval(TLB_DATA, vaddr) == 0);
 #endif
 
-#if (CLUSTER_HAS_TLB_SHOOTDOWN)
-	KASSERT(tlb_shootdown(vaddr) == 0);
-#elif !defined(__unix64__)
-	kprintf("[kernel][mm] cannot shootdown %x", vaddr);
-#endif
+	KASSERT(__tlb_shootdown(vaddr) == 0);
 
 	tlb_flush();
 
@@ -720,5 +777,4 @@ PUBLIC void upool_init(void)
 	#endif
 
 	exception_register(EXCEPTION_PAGE_FAULT, do_page_fault);
-
 }

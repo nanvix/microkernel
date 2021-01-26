@@ -554,4 +554,58 @@
 
 /**@}*/
 
+/*============================================================================*
+ * TLB manager                                                                *
+ *============================================================================*/
+
+/**
+ * @addtogroup kernel-mm-tlb TLB Manager
+ * @ingroup kernel-mm
+ *
+ * @brief TLB Manager
+ */
+/**@{*/
+
+#if defined(__NANVIX_MICROKERNEL)
+
+	/**
+	 * @brief TLB shootdown function type.
+	 */
+	typedef int (* tlb_shootdown_fn)(vaddr_t);
+
+	/**
+	 * @brief Sets the TLB shootdown method.
+	 *
+	 * @param fn Function pointer.
+	 *
+	 * @returns Upon successful completion, zero is returned. Upon failure,
+	 * negative numver is returned instead.
+	 */
+	EXTERN int tlb_set_shootdown_function(tlb_shootdown_fn fn);
+
+	/**
+	 * @brief Invalidates the TLB entry that encodes the virtual address @p
+	 * addr in all cores.
+	 *
+	 * @param vaddr Virtual address that represents the TLB entry.
+	 *
+	 * @returns Upon successful completion, zero is returned. Upon failure,
+	 * negative numver is returned instead.
+	 */
+	EXTERN int _tlb_shootdown(vaddr_t vaddr);
+
+	/**
+	 * @brief Software TLB Shootdown configuration.
+	 *
+	 * @details This funtions must be called after the boot of the submodules
+	 * of the kernel. Precisely, its configure the TLB shootdown method between
+	 * the default or the software behavior.
+	 */
+	EXTERN void tlb_shootdown_config(void);
+
+#endif
+
+/**@}*/
+
+
 #endif /** NANVIX_MM_H_ */

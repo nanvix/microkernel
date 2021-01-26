@@ -117,6 +117,7 @@
 	#define NR_task_continue       64 /**< kernel_task_continue()       */
 	#define NR_task_complete       65 /**< kernel_task_complete()       */
 	#define NR_task_current        66 /**< kernel_task_current()        */
+	#define NR_tlb_shootdown       67 /**< kernel_tlb_shootdown()       */
 
 	#define NR_last_kcall          67 /**< NR_SYSCALLS definer          */
 	/**@}*/
@@ -278,6 +279,21 @@
 	 * failure, a negative error code is returned instead.
 	 */
 	EXTERN int kernel_upage_link(vaddr_t vaddr1, vaddr_t vaddr2);
+
+/*============================================================================*
+ * TLB Kernel Calls                                                           *
+ *============================================================================*/
+
+	/**
+	 * @brief Invalidates the TLB entry that encodes the virtual address @p
+	 * addr in all cores.
+	 *
+	 * @param addr Virtual address that represents the TLB entry.
+	 *
+	 * @returns Upon successful completion, zero is returned. Upon failure,
+	 * negative numver is returned instead.
+	 */
+	EXTERN int kernel_tlb_shootdown(vaddr_t addr);
 
 /*============================================================================*
  * NoC Kernel Calls                                                           *
