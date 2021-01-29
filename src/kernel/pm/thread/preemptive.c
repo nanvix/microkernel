@@ -489,28 +489,39 @@ PUBLIC void do_thread_schedule(bool is_aging)
 		/* Notify a scheduling event to the older thread. */
 		while ((older = (struct tnode *) resource_dequeue(&olders)) != NULL)
 		{
+#if 0
+			/**
+			 * If has many syscall request, maybe the master can leave
+			 * the dispatcher on starvation.
+			 */
+			if (older->thread == KTHREAD_MASTER)
+				continue;
+#endif
+
 			/* Gets the target coreid. */
 			coreid = thread_get_coreid(older->thread);
 
-			/* Do not notify itself. */
-			if (UNLIKELY(coreid == mycoreid))
-			{
-				spinlock_unlock(&lock_tm);
-					thread_yield();
-				spinlock_lock(&lock_tm);
-			}
+			/* Sets the desired affinity to the target core. */
+			thread_desired_affinity = KTHREAD_AFFINITY_FIXED(coreid);
 
-			else
+			/* Did find any thread that fit into the target core? */
+			if (resource_search_verify(&scheduling, thread_choose) >= 0)
 			{
-				/* Sets the desired affinity to the target core. */
-				thread_desired_affinity = KTHREAD_AFFINITY_FIXED(coreid);
+				/* Do not notify itself. */
+				if (UNLIKELY(coreid == mycoreid))
+				{
+					spinlock_unlock(&lock_tm);
+						KASSERT(thread_yield() == 0);
+					spinlock_lock(&lock_tm);
+				}
 
-				/* Did find any thread that fit into the target core? */
-				if (resource_search_verify(&scheduling, thread_choose) >= 0)
+				/* Notify slave core. */
+				else
 				{
 					KASSERT(kevent_notify(KEVENT_SCHED, coreid) == 0);
-					break;
 				}
+
+				break;
 			}
 		}
 	}
@@ -864,7 +875,6 @@ PUBLIC void __thread_init(void)
 		/* Initialize thread structure. */
 		KASSERT(master->coreid   == COREID_MASTER);
 		KASSERT(master->affinity == KTHREAD_AFFINITY_MASTER);
-		master->state = THREAD_READY;
 
 		/* Allocate stacks to the thread. */
 		KASSERT((ustacks[KSTACK_MAX - 1] = (struct stack *) kpage_get(1)) != NULL);
@@ -894,7 +904,6 @@ PUBLIC void __thread_init(void)
 		/* Initialize thread structure. */
 		KASSERT(dispatcher->coreid   == KTHREAD_DISPATCHER_CORE);
 		KASSERT(dispatcher->affinity == KTHREAD_AFFINITY_FIXED(KTHREAD_DISPATCHER_CORE));
-		dispatcher->state = THREAD_READY;
 
 		/* Allocate stacks to the thread. */
 		KASSERT((ustacks[KSTACK_MAX - 3] = (struct stack *) kpage_get(1)) != NULL);

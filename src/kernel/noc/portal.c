@@ -50,6 +50,9 @@ PRIVATE short fifos[HW_PORTAL_MAX][KPORTAL_PORT_NR];             /**< Portal FIF
 PRIVATE struct active_functions portal_functions;                /**< Portal functions. */
 PRIVATE struct active portals[HW_PORTAL_MAX];                    /**< Portals.          */
 PRIVATE struct active_pool portalpool;                           /**< Portal pool.      */
+#if __NANVIX_USE_TASKS
+	PRIVATE struct task portaltasks[HW_PORTAL_MAX];              /**< Portal' tasks.    */
+#endif
 /**@}*/
 
 /**
@@ -169,6 +172,9 @@ PRIVATE void do_portal_table_init(void)
 	/* Initializes portal pool. */
 	portalpool.actives    = portals;
 	portalpool.nactives   = HW_PORTAL_MAX;
+#if __NANVIX_USE_TASKS
+	portalpool.tasks      = portaltasks;
+#endif
 
 	/* Configure HAL Portal subsystem to use microkernel lock functions. */
 	KASSERT(
@@ -328,26 +334,7 @@ PRIVATE int portal_get_portid(int id)
  */
 PRIVATE void portal_wait_active(int hwfd)
 {
-	/* Search for the active portal. */
-	for (int i = 0; i < HW_PORTAL_MAX; ++i)
-	{
-		if (!resource_is_used(&portals[i].resource))
-			continue;
-
-		/* Found. */
-		if (portals[i].hwfd == hwfd)
-		{
-			/* It myst be set to busy before the wait operation. */
-			KASSERT(resource_is_busy(&portals[i].resource));
-
-			semaphore_down(&portals[i].waiting);
-
-			return;
-		}
-	}
-
-	/* Should not happens. */
-	kpanic("[kernel][noc][portal] Tried to wait for an invalid active portal.");
+	active_handler_wait(&portalpool, hwfd, "portal");
 }
 
 /*============================================================================*
@@ -361,23 +348,7 @@ PRIVATE void portal_wait_active(int hwfd)
  */
 PRIVATE void portal_wakeup_active(int hwfd)
 {
-	/* Search for the active portal. */
-	for (int i = 0; i < HW_PORTAL_MAX; ++i)
-	{
-		if (!resource_is_used(&portals[i].resource))
-			continue;
-
-		/* Found. */
-		if (portals[i].hwfd == hwfd)
-		{
-			semaphore_up(&portals[i].waiting);
-
-			return;
-		}
-	}
-
-	/* Should not happens. */
-	kpanic("[kernel][noc][portal] Tried to wake up for an invalid active portal.");
+	active_handler_wakeup(&portalpool, hwfd, "portal");
 }
 
 /*============================================================================*

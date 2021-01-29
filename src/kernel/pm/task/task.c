@@ -50,21 +50,6 @@
 /**@}*/
 
 /**
- * @brief Node of a Task.
- *
- * @details This node is used to put a task into a dependency queue.
- */
-struct node_task
-{
-	/*
-	 * XXX: Don't Touch! This Must Come First!
-	 */
-	struct resource resource; /**< Resource struct.  */
-
-	struct task * task;       /**< Task struct.      */
-};
-
-/**
  * @brief Task board.
  */
 PRIVATE struct task_board
@@ -312,27 +297,29 @@ PRIVATE void __task_error(struct task * task)
 PUBLIC void task_loop(void)
 {
 	int ret;
-	struct section_guard guard;
+	int intlvl;
 
 	kprintf("[kernel][dispatcher] Working on core %d!", core_get_id());
+	interrupts_enable();
 
 	/* We do not want to be interrupted in the critical region. */
-	section_guard_init(&guard, &tasks.lock, INTERRUPT_LEVEL_NONE);
-	section_guard_entry(&guard);
+	intlvl = interrupts_set_level(INTERRUPT_LEVEL_NONE);
+	spinlock_lock(&tasks.lock);
 
 	/* Endless loop. */
 	while (LIKELY(!shutdown))
 	{
-		section_guard_exit(&guard);
-
 		/* Waits for tasks. */
-		semaphore_down(&tasks.sem);
+		spinlock_unlock(&tasks.lock);
+			semaphore_down(&tasks.sem);
+		spinlock_lock(&tasks.lock);
 
-		/* Dispatch task. */
-		section_guard_entry(&guard);
+			/* Dispatch task. */
 			ctask = TASK_PTR(resource_dequeue(&tasks.actives));
 			ctask->state = TASK_STATE_RUNNING;
-		section_guard_exit(&guard);
+
+		spinlock_unlock(&tasks.lock);
+		interrupts_set_level(intlvl);
 
 		/* Valid function. */
 		KASSERT(ctask->fn != NULL);
@@ -343,15 +330,15 @@ PUBLIC void task_loop(void)
 		/* Valid return. */
 		KASSERT(WITHIN(ret, TASK_RET_ERROR, TASK_RET_STOP + 1));
 
-		section_guard_entry(&guard);
+		intlvl = interrupts_set_level(INTERRUPT_LEVEL_NONE);
+		spinlock_lock(&tasks.lock);
 
 			/* Evaluate the return type. */
 			switch (ret)
 			{
 				/* Complete the task. */
 				case TASK_RET_SUCCESS:
-					if (LIKELY(ctask->state == TASK_STATE_RUNNING))
-						__task_complete(ctask);
+					__task_complete(ctask);
 					break;
 
 				/* Reschedule the task. */
@@ -376,7 +363,8 @@ PUBLIC void task_loop(void)
 			ctask = NULL;
 	}
 
-	section_guard_exit(&guard);
+	interrupts_set_level(intlvl);
+	spinlock_unlock(&tasks.lock);
 }
 
 /*============================================================================*
@@ -449,7 +437,7 @@ PUBLIC int task_create(
 
 	/* argument and return. */
 	task->fn       = fn;
-	task->args.ret = (-EINVAL);
+	task->args.ret = 0;
 
 	if (args)
 	{
@@ -674,11 +662,15 @@ PUBLIC int task_wait(struct task * task)
 	if (UNLIKELY(!task))
 		return (-EINVAL);
 
+	/* Invalid state. */
+	if (UNLIKELY(!WITHIN(task->state, TASK_STATE_NOT_STARTED, (TASK_STATE_ERROR + 1))))
+		return (-EINVAL);
+
 	/* Waits for all stages be completed. */
 	semaphore_down(&task->sem);
 
 	/* Success. */
-	return (0);
+	return (task->args.ret);
 }
 
 /*============================================================================*

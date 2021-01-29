@@ -50,6 +50,9 @@ PRIVATE short fifos[HW_MAILBOX_MAX][MAILBOX_PORT_NR];          /**< Mailbox FIFO
 PRIVATE struct active_functions mailbox_functions;             /**< Mailbox functions. */
 PRIVATE struct active mailboxes[HW_MAILBOX_MAX];               /**< Mailboxes.         */
 PRIVATE struct active_pool mbxpool;                            /**< Mailbox pool.      */
+#if __NANVIX_USE_TASKS
+	PRIVATE struct task mbxtasks[HW_MAILBOX_MAX];              /**< Mailboxes' tasks.  */
+#endif
 /**@}*/
 
 /**
@@ -170,6 +173,9 @@ PRIVATE void do_mailbox_table_init(void)
 	/* Initializes mailbox pool. */
 	mbxpool.actives    = mailboxes;
 	mbxpool.nactives   = HW_MAILBOX_MAX;
+#if __NANVIX_USE_TASKS
+	mbxpool.tasks      = mbxtasks;
+#endif
 
 	/* Configure HAL Mailbox subsystem to use microkernel lock functions. */
 	KASSERT(
@@ -343,26 +349,7 @@ PRIVATE int mailbox_get_portid(int id)
  */
 PRIVATE void mailbox_wait_active(int hwfd)
 {
-	/* Search for the active portal. */
-	for (int i = 0; i < HW_MAILBOX_MAX; ++i)
-	{
-		if (!resource_is_used(&mailboxes[i].resource))
-			continue;
-
-		/* Found. */
-		if (mailboxes[i].hwfd == hwfd)
-		{
-			/* It myst be set to busy before the wait operation. */
-			KASSERT(resource_is_busy(&mailboxes[i].resource));
-
-			semaphore_down(&mailboxes[i].waiting);
-
-			return;
-		}
-	}
-
-	/* Should not happens. */
-	kpanic("[kernel][noc][mailbox] Tried to wait for an invalid active mailbox.");
+	active_handler_wait(&mbxpool, hwfd, "mailbox");
 }
 
 /*============================================================================*
@@ -376,23 +363,7 @@ PRIVATE void mailbox_wait_active(int hwfd)
  */
 PRIVATE void mailbox_wakeup_active(int hwfd)
 {
-	/* Search for the active portal. */
-	for (int i = 0; i < HW_MAILBOX_MAX; ++i)
-	{
-		if (!resource_is_used(&mailboxes[i].resource))
-			continue;
-
-		/* Found. */
-		if (mailboxes[i].hwfd == hwfd)
-		{
-			semaphore_up(&mailboxes[i].waiting);
-
-			return;
-		}
-	}
-
-	/* Should not happens. */
-	kpanic("[kernel][noc][mailbox] Tried to wake up for an invalid active mailbox.");
+	active_handler_wakeup(&mbxpool, hwfd, "mailbox");
 }
 
 /*============================================================================*

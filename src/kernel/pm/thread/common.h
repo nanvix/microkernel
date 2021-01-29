@@ -267,7 +267,7 @@
 	/**
 	 * @brief Dispatcher core.
 	 */
-	#define KTHREAD_DISPATCHER_CORE (CORES_NUM - 1)
+	#define KTHREAD_DISPATCHER_CORE (0)
 
 #endif /* __NANVIX_USE_TASKS */
 

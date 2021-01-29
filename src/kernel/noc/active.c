@@ -475,6 +475,172 @@ error:
 	return (ret);
 }
 
+#if __NANVIX_USE_TASKS
+
+/*============================================================================*
+ * active_set_task()                                                          *
+ *============================================================================*/
+
+/**
+ * @brief Connect the task to the child of the current running task.
+ *
+ * @param pool Active resource pool.
+ * @param id   Compose address by active and port ID.
+ *
+ * @returns Upon successful completion, zero is returned. Upon
+ * failure, a negative error code is returned instead.
+ */
+PRIVATE void active_set_task(const struct active_pool * pool, const struct active * active)
+{
+	struct task * atask;
+	struct task * ctask;
+	struct task * child;
+
+	atask = &pool->tasks[(active - pool->actives)];
+	KASSERT(atask->state == TASK_STATE_NOT_STARTED || atask->state == TASK_STATE_COMPLETED);
+	KASSERT(atask->children.size == 0);
+
+	KASSERT((ctask = task_current()) != NULL);
+	KASSERT(ctask->state == TASK_STATE_RUNNING);
+	KASSERT(ctask->children.size == 1);
+	KASSERT(ctask->children.head != NULL);
+
+	child = ((struct node_task *) ctask->children.head)->task;
+	KASSERT(child->parents == 1);
+
+	/* Connect active task to the child of current task, creating
+	 * a dependency to it:
+	 *
+	 *        ctask (awrite/aread) ----- child (wait)
+	 *                                        /
+	 *        atask (op. completed) ---------´
+	 *
+	 * As the handler is going to create dispatching the atask, the
+	 * task of waiting will only happen when the operation is completed.
+	 */
+	KASSERT(task_connect(atask, child) == 0);
+}
+
+/*============================================================================*
+ * active_unset_task()                                                        *
+ *============================================================================*/
+
+/**
+ * @brief Disconnect the task to the child of the current running task.
+ *
+ * @param pool Active resource pool.
+ * @param id   Compose address by active and port ID.
+ *
+ * @returns Upon successful completion, zero is returned. Upon
+ * failure, a negative error code is returned instead.
+ */
+PRIVATE void active_unset_task(const struct active_pool * pool, const struct active * active)
+{
+	struct task * atask;
+	struct task * ctask;
+	struct task * child;
+
+	atask = &pool->tasks[(active - pool->actives)];
+	//KASSERT(atask->state == TASK_STATE_NOT_STARTED || atask->state == TASK_STATE_COMPLETED);
+	KASSERT(atask->children.size == 1);
+
+	ctask = task_current();
+	KASSERT(ctask->state == TASK_STATE_RUNNING);
+	KASSERT(ctask->children.size == 1);
+	KASSERT(ctask->children.head != NULL);
+
+	child = ((struct node_task *) ctask->children.head)->task;
+	//KASSERT(child->parents == 2);
+
+	/* Disconnect active task to the child of current task, removing
+	 * the dependency:
+	 *
+	 *        ctask (awrite/aread) ----- child (wait)
+	 *
+	 *        atask (op. completed) ---X
+	 *
+	 * This is needed because a awrite/aread can failed for N reasons.
+	 */
+	if (task_disconnect(atask, child) != 0)
+	{
+		kprintf("error");
+		KASSERT(false);
+	}
+}
+
+#endif
+
+/*============================================================================*
+ * active_handler_wait()                                                      *
+ *============================================================================*/
+
+/**
+ * @brief Waits a communication finishs on a active.
+ *
+ * @param hwfd Hardware file descriptor allocated by the active.
+ */
+PUBLIC void active_handler_wait(const struct active_pool * pool, int hwfd, char * rule)
+{
+	struct active * actives = pool->actives;
+
+	/* Search for the active portal. */
+	for (int i = 0; i < pool->nactives; ++i)
+	{
+		if (!resource_is_used(&actives[i].resource))
+			continue;
+
+		/* Found. */
+		if (actives[i].hwfd == hwfd)
+		{
+			/* It myst be set to busy before the wait operation. */
+			KASSERT(resource_is_busy(&actives[i].resource));
+
+			semaphore_down(&actives[i].waiting);
+
+			return;
+		}
+	}
+
+	/* Should not happens. */
+	kpanic("[kernel][noc][%s] Tried to wait for an invalid active.", rule);
+}
+
+/*============================================================================*
+ * mailbox_wait_active()                                                      *
+ *============================================================================*/
+
+/**
+ * @brief Complete a communication on a active.
+ *
+ * @param hwfd Hardware file descriptor allocated by the active.
+ */
+PUBLIC void active_handler_wakeup(const struct active_pool * pool, int hwfd, char * rule)
+{
+	struct active * actives = pool->actives;
+
+	/* Search for the active portal. */
+	for (int i = 0; i < pool->nactives; ++i)
+	{
+		if (!resource_is_used(&actives[i].resource))
+			continue;
+
+		/* Found. */
+		if (actives[i].hwfd == hwfd)
+		{
+			semaphore_up(&actives[i].waiting);
+
+#if __NANVIX_USE_TASKS
+			task_dispatch(&pool->tasks[i]);
+#endif
+
+			return;
+		}
+	}
+
+	/* Should not happens. */
+	kpanic("[kernel][noc][%s] Tried to wake up for an invalid active.", rule);
+}
+
 /*============================================================================*
  * active_aread()                                                             *
  *============================================================================*/
@@ -598,6 +764,11 @@ PUBLIC ssize_t active_aread(
 		port->mbufferpool = active->mbufferpool;
 		buf = mbuffer_get(port->mbufferpool, mbufferid);
 
+#if __NANVIX_USE_TASKS
+		/* Connect active task to current task. */
+		active_set_task(pool, active);
+#endif
+
 		t1 = clock_read();
 
 			/* Setup asynchronous read. */
@@ -623,6 +794,11 @@ discard_message:
 		KASSERT(mbuffer_release(port->mbufferpool, mbufferid, MBUFFER_DISCARD_MESSAGE) == 0);
 		port->mbufferid   = -1;
 		port->mbufferpool = NULL;
+
+#if __NANVIX_USE_TASKS
+		/* Disconnect active task. */
+		active_unset_task(pool, active);
+#endif
 
 error:
 	spinlock_unlock(&active->lock);
@@ -764,11 +940,16 @@ PUBLIC ssize_t active_awrite(
 		if (resource_is_busy(&active->resource))
 			goto error;
 
+#if __NANVIX_USE_TASKS
+		/* Connect active task to current task. */
+		active_set_task(pool, active);
+#endif
+
 		t1 = clock_read();
 
 			/* Setup asynchronous write. */
 			if ((ret = active->fn->do_awrite(active->hwfd, (void *) &buf->message, active->size)) < 0)
-				goto error;
+				goto unset_task;
 
 		t2 = clock_read();
 
@@ -779,6 +960,13 @@ PUBLIC ssize_t active_awrite(
 		resource_set_busy(&active->resource);
 
 		ret = (ACTIVE_COMM_SUCCESS);
+
+unset_task:
+#if __NANVIX_USE_TASKS
+		/* Connect active task to current task. */
+		if (ret < 0)
+			active_unset_task(pool, active);
+#endif
 
 error:
 	spinlock_unlock(&active->lock);
@@ -965,6 +1153,20 @@ PRIVATE void _active_free(const struct active_pool * pool, int id)
 	resource_set_unused(&pool->actives[id].resource);
 }
 
+#if __NANVIX_USE_TASKS
+
+/*============================================================================*
+ * active_task_dummy()                                                        *
+ *============================================================================*/
+
+PRIVATE int active_task_dummy(struct task_args * args)
+{
+	UNUSED(args);
+	return (TASK_RET_SUCCESS);
+}
+
+#endif
+
 /*============================================================================*
  * _active_create()                                                           *
  *============================================================================*/
@@ -1002,6 +1204,8 @@ PUBLIC int _active_create(const struct active_pool * pool, int local)
 		return (hwfd);
 	}
 
+	actid = (active - pool->actives);
+
 	/* Initialize hardware active. */
 	active->flags    = 0;
 	active->hwfd     = hwfd;
@@ -1011,7 +1215,15 @@ PUBLIC int _active_create(const struct active_pool * pool, int local)
 	resource_set_rdonly(&active->resource);
 	resource_set_notbusy(&active->resource);
 
-	return (active - pool->actives);
+#if __NANVIX_USE_TASKS
+
+	pool->tasks[actid].args.arg0 = actid;
+	if (task_create(&pool->tasks[actid], active_task_dummy, &pool->tasks[actid].args, 0) != 0)
+		return (-EINVAL);
+
+#endif
+
+	return (actid);
 }
 
 /*============================================================================*
@@ -1059,6 +1271,8 @@ PUBLIC int _active_open(const struct active_pool * pool, int local, int remote)
 	else if (!node_is_local(local))
 		return (-EINVAL);
 
+	actid = (active - pool->actives);
+
 	/* Initialize hardware active. */
 	active->flags    = 0;
 	active->hwfd     = hwfd;
@@ -1068,7 +1282,15 @@ PUBLIC int _active_open(const struct active_pool * pool, int local, int remote)
 	resource_set_wronly(&active->resource);
 	resource_set_notbusy(&active->resource);
 
-	return (active - pool->actives);
+#if __NANVIX_USE_TASKS
+
+	pool->tasks[actid].args.arg0 = (word_t) actid;
+	if (task_create(&pool->tasks[actid], active_task_dummy, &pool->tasks[actid].args, 0) != 0)
+		return (-EINVAL);
+
+#endif
+
+	return (actid);
 }
 
 #endif /* (__TARGET_HAS_MAILBOX || __TARGET_HAS_PORTAL) */

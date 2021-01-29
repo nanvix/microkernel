@@ -619,12 +619,12 @@
 	 * @name States of a task.
 	 */
 	/**@{*/
-	#define TASK_STATE_ERROR       (-1) /**< Task exit with error.  */
 	#define TASK_STATE_NOT_STARTED  (0) /**< Task not dispatched.   */
 	#define TASK_STATE_READY        (1) /**< Task ready to execute. */
 	#define TASK_STATE_RUNNING      (2) /**< Task running.          */
 	#define TASK_STATE_STOPPED      (3) /**< Task Stopped.          */
 	#define TASK_STATE_COMPLETED    (4) /**< Task completed.        */
+	#define TASK_STATE_ERROR        (5) /**< Task exit with error.  */
 	/**@}*/
 
 	/**
@@ -715,6 +715,20 @@
 		 * @brief Waiting control.
 		 */
 		struct semaphore sem;                 /**< Semaphore.                  */
+	};
+
+	/**
+	 * @brief Node of a Task.
+	 *
+	 * @details This node is used to put a task into a dependency queue.
+	 */
+	struct node_task
+	{
+		/*
+		 * XXX: Don't Touch! This Must Come First!
+		 */
+		struct resource resource; /**< Resource struct.  */
+		struct task * task;       /**< Task struct.      */
 	};
 
 	/**

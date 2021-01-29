@@ -33,7 +33,7 @@
  */
 /**@{*/
 EXTERN void kmain(int argc, const char *argv[]);
-EXTERN void task_loop(void);
+EXTERN void * task_loop(void * args);
 /**@}*/
 
 /**

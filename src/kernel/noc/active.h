@@ -239,6 +239,9 @@
 	struct active_pool
 	{
 		struct active * actives; /**< Pool of actives.    */
+#if __NANVIX_USE_TASKS
+		struct task * tasks;     /**< Array of task.      */
+#endif
 		int nactives;            /**< Number of actives.  */
 	};
 
@@ -253,6 +256,8 @@
 	EXTERN int active_wait(const struct active_pool *, int, const struct active_config *, struct pstats *);
 	EXTERN int _active_create(const struct active_pool *, int);
 	EXTERN int _active_open(const struct active_pool *, int, int);
+	EXTERN void active_handler_wait(const struct active_pool * pool, int hwfd, char * rule);
+	EXTERN void active_handler_wakeup(const struct active_pool * pool, int hwfd, char * rule);
 
 	/**
 	 * @brief Sets a active as allowed.
