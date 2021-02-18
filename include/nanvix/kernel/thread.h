@@ -367,6 +367,7 @@
 	struct thread_key 
 	{
 		int id;
+		void* value;
 	};
 	
 	/**
@@ -375,8 +376,9 @@
 	 * @param key Target key.
 	 * @param destructor Optional destructor function, currently unused.
 	 **/
-	EXTERN int thread_key_create(thread_key *key, void (*destructor)(*void));
+	EXTERN int thread_key_create(struct thread_key *key, void (*destructor)(*void));
 	
+	EXTERN int thread_getspecific((struct thread_key key);
 
 #endif /* NANVIX_THREAD_H_ */
 
