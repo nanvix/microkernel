@@ -736,14 +736,23 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 		new_thread->tid      = _tid;
 		new_thread->arg      = arg;
 		new_thread->start    = start;
-		new_thread->affinity = KTHREAD_AFFINITY_DEFAULT;
 
 		/**
-		 * Indicate the first core based on the offset of thread user thread
-		 * (not really used yet). Obs.: Its is greater than 0 because the
-		 * core 0 is reserved to the master thread
+		 * Indicate the first core based on the offset of thread user thread.
+		 *
+		 * Range of cores: [1, (CORES_NUM - 1)]
+		 *
+		 * @details Its is greater than 0 because the core 0 is reserved to the
+		 * master thread.
 		 */
-		KASSERT((new_thread->coreid = (utid % KTHREAD_IDLE_MAX) + 1) > 0);
+		KASSERT((new_thread->coreid = (utid % (CORES_NUM - 1)) + 1) > 0);
+
+		/* Sets default affinity. */
+#if __NANVIX_MICROKERNEL_STATIC_SCHED
+		new_thread->affinity = KTHREAD_AFFINITY_FIXED(new_thread->coreid);
+#else
+		new_thread->affinity = KTHREAD_AFFINITY_DEFAULT;
+#endif
 
 		/* Store reference to the stacks of the thread. */
 		ustacks[utid] = ustack;

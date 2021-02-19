@@ -46,6 +46,15 @@
  *============================================================================*/
 
 	/**
+	 * @name Execution Parameters.
+	 */
+	/**@{*/
+	#ifndef __NANVIX_MICROKERNEL_STATIC_SCHED
+	#define __NANVIX_MICROKERNEL_STATIC_SCHED 0
+	#endif
+	/**@}*/
+
+	/**
 	 * @brief Kernel thread dedicated to kernel services.
 	 */
 	#if __NANVIX_USE_TASKS
