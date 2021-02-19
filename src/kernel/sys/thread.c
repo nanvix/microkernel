@@ -144,4 +144,15 @@ PUBLIC int kernel_thread_yield(void)
 #endif
 }
 
+/**
+ * Gets performance statistics of the kernel. Retrived statistics are
+ * stored into the userspace buffer pointed to by @p buffer. If @p
+ * buffer is a null pointer, then performance counters are started to
+ * watch the performance event @p stat.
+ */
+PUBLIC int kernel_thread_stats(int tid, uint64_t * buffer, int stat)
+{
+	return (thread_stats(tid, buffer, stat));
+}
+
 #endif

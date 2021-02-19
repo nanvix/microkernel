@@ -227,6 +227,17 @@ PRIVATE void __thread_prolog_config(struct thread * curr, struct thread * next)
 	if (curr == next)
 		return;
 
+#if __NANVIX_MICROKERNEL_THREAD_STATS
+
+	/* Save execution time. */
+	if (curr->stats.exec_start != 0ULL)
+	{
+		curr->stats.exec_total = (clock_read() - curr->stats.exec_start);
+		curr->stats.exec_start = 0ULL;
+	}
+
+#endif
+
 	/* Prolog has no operations for Idles. */
 	if (WITHIN(curr, &idle_threads[0], &idle_threads[KTHREAD_IDLE_MAX]))
 		return;
@@ -292,6 +303,13 @@ PUBLIC void __thread_prolog(struct thread * curr)
 
 			curr->resource.next = NULL;
 		}
+
+#if __NANVIX_MICROKERNEL_THREAD_STATS
+
+		/* Start measures the execution time. */
+		curr->stats.exec_start = clock_read();
+
+#endif
 
 	thread_unlock_tm(&guard);
 }
@@ -754,6 +772,11 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 		new_thread->affinity = KTHREAD_AFFINITY_DEFAULT;
 #endif
 
+#if __NANVIX_MICROKERNEL_THREAD_STATS
+		new_thread->stats.exec_start = 0ULL;
+		new_thread->stats.exec_total = 0ULL;
+#endif
+
 		/* Store reference to the stacks of the thread. */
 		ustacks[utid] = ustack;
 		kstacks[utid] = kstack;
@@ -881,6 +904,11 @@ PUBLIC void __thread_init(void)
 		/* Gets the dispatcher thread. */
 		struct thread * master = KTHREAD_MASTER;
 
+#if __NANVIX_MICROKERNEL_THREAD_STATS
+		master->stats.exec_start = 0ULL;
+		master->stats.exec_total = 0ULL;
+#endif
+
 		/* Initialize thread structure. */
 		KASSERT(master->coreid   == COREID_MASTER);
 		KASSERT(master->affinity == KTHREAD_AFFINITY_MASTER);
@@ -909,6 +937,11 @@ PUBLIC void __thread_init(void)
 
 		/* Gets the dispatcher thread. */
 		struct thread * dispatcher = KTHREAD_DISPATCHER;
+
+#if __NANVIX_MICROKERNEL_THREAD_STATS
+		dispatcher->stats.exec_start = 0ULL;
+		dispatcher->stats.exec_total = 0ULL;
+#endif
 
 		/* Initialize thread structure. */
 		KASSERT(dispatcher->coreid   == KTHREAD_DISPATCHER_CORE);

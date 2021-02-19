@@ -116,6 +116,14 @@ PUBLIC void do_kcall2(void)
 				);
 				break;
 
+			case NR_thread_stats:
+				ret = kernel_thread_stats(
+					(int)(long) sysboard[coreid].arg0,
+					(uint64_t *)(long) sysboard[coreid].arg1,
+					(int)(long) sysboard[coreid].arg2
+				);
+				break;
+
 			case NR_wakeup:
 				ret = kernel_wakeup(
 					(int)(long) sysboard[coreid].arg0

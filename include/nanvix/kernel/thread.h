@@ -52,6 +52,9 @@
 	#ifndef __NANVIX_MICROKERNEL_STATIC_SCHED
 	#define __NANVIX_MICROKERNEL_STATIC_SCHED 0
 	#endif
+	#ifndef __NANVIX_MICROKERNEL_THREAD_STATS
+	#define __NANVIX_MICROKERNEL_THREAD_STATS 0
+	#endif
 	/**@}*/
 
 	/**
@@ -146,6 +149,26 @@
 	/**@}*/
 
 	/**
+	 * @name Stats options.
+	 */
+	/**@{*/
+	#define KTHREAD_STATS_EXEC_TIME 0
+	/**@}*/
+
+#if __NANVIX_MICROKERNEL_THREAD_STATS
+
+	/**
+	 * @brief Thread statistics.
+	 */
+	struct thread_stats
+	{
+		uint64_t exec_start;
+		uint64_t exec_total;
+	};
+
+#endif
+
+	/**
 	 * @brief Thread.
 	 */
 	struct thread
@@ -155,14 +178,19 @@
 		 */
 		struct resource resource; /**< Generic resource information. */
 
-		int tid;                  /**< Thread ID.                    */
-		short coreid;             /**< Core ID.                      */
-		short state;              /**< State.                        */
-		int affinity;             /**< Affinity.                     */
-		uint64_t age;             /**< Age.                          */
-		void *arg;                /**< Argument.                     */
-		void *(*start)(void*);    /**< Starting routine.             */
-		struct context *ctx;      /**< Preempted context.            */
+		int tid;                   /**< Thread ID.                   */
+		short coreid;              /**< Core ID.                     */
+		short state;               /**< State.                       */
+		int affinity;              /**< Affinity.                    */
+		uint64_t age;              /**< Age.                         */
+		void *arg;                 /**< Argument.                    */
+		void *(*start)(void*);     /**< Starting routine.            */
+		struct context *ctx;       /**< Preempted context.           */
+
+#if __NANVIX_MICROKERNEL_THREAD_STATS
+		struct thread_stats stats; /**< Statistics.                  */
+#endif
+
 	};
 
 	/**
@@ -362,6 +390,11 @@
 	 * @brief Manage the thread system.
 	 */
 	EXTERN void thread_manager(void);
+
+	/**
+	 * @brief Perform thread statistics.
+	 */
+	EXTERN int thread_stats(int tid, uint64_t *buffer, int stat);
 
 	/**
 	 * @brief Initialize thread system.

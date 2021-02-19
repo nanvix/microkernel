@@ -118,8 +118,9 @@
 	#define NR_task_complete       65 /**< kernel_task_complete()       */
 	#define NR_task_current        66 /**< kernel_task_current()        */
 	#define NR_tlb_shootdown       67 /**< kernel_tlb_shootdown()       */
+	#define NR_thread_stats        68 /**< kernel_thread_stats()        */
 
-	#define NR_last_kcall          67 /**< NR_SYSCALLS definer          */
+	#define NR_last_kcall          69 /**< NR_SYSCALLS definer          */
 	/**@}*/
 
 /*============================================================================*
@@ -137,6 +138,7 @@
 	EXTERN int kernel_sleep(void);
 	EXTERN int kernel_wakeup(int);
 	EXTERN int kernel_thread_yield(void);
+	EXTERN int kernel_thread_stats(int, uint64_t *, int);
 
 	/**
 	 * @brief Shutdowns the kernel.

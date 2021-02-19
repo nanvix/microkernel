@@ -489,7 +489,69 @@ PUBLIC int thread_join(int tid, void **retval)
 	return (ret);
 }
 
+/**
+ * Gets performance statistics of the thread. Retrived statistics are
+ * stored into the userspace buffer pointed to by @p buffer. If @p
+ * buffer is a null pointer, then performance counters are started to
+ * watch the performance event @p perf.
+ */
+PUBLIC int thread_stats(int tid, uint64_t * buffer, int stat)
+{
+#if __NANVIX_MICROKERNEL_THREAD_STATS
+
+	struct thread * t;
+
+	if (tid < 0 || (t = thread_get(tid)) == NULL)
+		return (-EINVAL);
+
+	/* Start counter. */
+	if (buffer == NULL)
+	{
+		switch (stat)
+		{
+			case KTHREAD_STATS_EXEC_TIME:
+				t->stats.exec_total = 0ULL;
+				break;
+
+			default:
+				return (-EFAULT);
+		}
+	}
+
+	/* Stop counter. */
+	else
+	{
+		/* Bad buffer. */
+		if (!mm_check_area(VADDR(buffer), sizeof(uint64_t), UMEM_AREA))
+			return (-EFAULT);
+
+		/* Save statistic. */
+		switch (stat)
+		{
+			case KTHREAD_STATS_EXEC_TIME:
+				*buffer = t->stats.exec_total;
+				break;
+
+			default:
+				return (-EFAULT);
+		}
+	}
+
+	return (0);
+
+#else
+
+	UNUSED(tid);
+	UNUSED(buffer);
+	UNUSED(stat);
+
+	return (-ENOSYS);
+
+#endif
+}
+
 #endif /* CLUSTER_IS_MULTICORE */
+
 
 /*============================================================================*
  * Thread Manager Initialization                                              *
@@ -522,6 +584,11 @@ PUBLIC void thread_init(void)
 		threads[i].arg      = NULL;
 		threads[i].start    = NULL;
 		threads[i].ctx      = NULL;
+
+#if __NANVIX_MICROKERNEL_THREAD_STATS
+		threads[i].stats.exec_start = 0ULL;
+		threads[i].stats.exec_total = 0ULL;
+#endif
 	}
 
 	for (int i = 1; i < CORES_NUM; ++i)
