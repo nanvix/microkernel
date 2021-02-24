@@ -19,11 +19,31 @@ int thread_key_create(thread_key *key, void (*destructor)(*void))
 	return (0);
 }
 
-int thread_getspecific((struct thread_key key))
+void* thread_getspecific((struct thread_key key))
 {
+	for (int i = 0; i < THREAD_KEY_MAX; ++1)
+	{
+		if (key->tid = keys[i]->tid || key->key->value == keys[i]->key->value)
+		{
+			return (value);
+			break;	
+		}
+		else 
+		{
+			return (NULL);
+	}
 
-}
 
 int thread_setspecific(struct thread_key key, void *value)
 {
-
+	for (int i = 0; i < THREAD_KEY_MAX; ++i)
+	{
+		if (keys[i]->tid == -1 || keys[i]->key->id == -1)
+			{
+			keys[i]->key->id = 0;	
+			keys[i]->tid = thread_get_curr_id();
+			keys[i]->key->value = value;
+			}
+	}
+	return (0);
+}

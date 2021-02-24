@@ -378,8 +378,9 @@
 	 **/
 	EXTERN int thread_key_create(struct thread_key *key, void (*destructor)(*void));
 	
-	EXTERN int thread_getspecific((struct thread_key key);
+	EXTERN void* thread_getspecific((struct thread_key key);
 
+	EXTERN int thread_setspecific(struct thread_key key, void *value)
 #endif /* NANVIX_THREAD_H_ */
 
 /**@}*/
