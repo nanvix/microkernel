@@ -368,55 +368,6 @@ PUBLIC void do_kcall2(void)
 
 #endif
 
-#if __NANVIX_USE_TASKS
-
-		case NR_task_unlink:
-			ret = task_unlink(
-				(struct task *) sysboard[coreid].arg0
-			);
-			break;
-
-		case NR_task_connect:
-			ret = task_connect(
-				(struct task *) sysboard[coreid].arg0,
-				(struct task *) sysboard[coreid].arg1
-			);
-			break;
-
-		case NR_task_disconnect:
-			ret = task_disconnect(
-				(struct task *) sysboard[coreid].arg0,
-				(struct task *) sysboard[coreid].arg1
-			);
-			break;
-
-		case NR_task_dispatch:
-			ret = task_dispatch(
-				(struct task *) sysboard[coreid].arg0
-			);
-			break;
-
-		case NR_task_emit:
-			ret = task_emit(
-				(struct task *) sysboard[coreid].arg0,
-				(int) sysboard[coreid].arg1
-			);
-			break;
-
-		case NR_task_continue:
-			ret = task_continue(
-				(struct task *) sysboard[coreid].arg0
-			);
-			break;
-
-		case NR_task_complete:
-			ret = task_complete(
-				(struct task *) sysboard[coreid].arg0
-			);
-			break;
-
-#endif /* __NANVIX_USE_TASKS */
-
 			default:
 				break;
 		}
@@ -582,6 +533,51 @@ PUBLIC int do_kcall(
 #endif
 
 #if __NANVIX_USE_TASKS
+
+		case NR_task_unlink:
+			ret = task_unlink(
+				(struct task *) arg0
+			);
+			break;
+
+		case NR_task_connect:
+			ret = task_connect(
+				(struct task *) arg0,
+				(struct task *) arg1
+			);
+			break;
+
+		case NR_task_disconnect:
+			ret = task_disconnect(
+				(struct task *) arg0,
+				(struct task *) arg1
+			);
+			break;
+
+		case NR_task_dispatch:
+			ret = task_dispatch(
+				(struct task *) arg0
+			);
+			break;
+
+		case NR_task_emit:
+			ret = task_emit(
+				(struct task *) arg0,
+				(int) arg1
+			);
+			break;
+
+		case NR_task_continue:
+			ret = task_continue(
+				(struct task *) arg0
+			);
+			break;
+
+		case NR_task_complete:
+			ret = task_complete(
+				(struct task *) arg0
+			);
+			break;
 
 		case NR_task_wait:
 			ret = task_wait(
