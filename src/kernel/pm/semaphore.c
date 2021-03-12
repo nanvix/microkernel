@@ -61,6 +61,44 @@ PUBLIC void semaphore_down(struct semaphore *sem)
 }
 
 /*============================================================================*
+ * semaphore_trydown()                                                        *
+ *============================================================================*/
+
+/**
+ * The semaphore_trydown() function performs a down operation in the
+ * semaphore pointed to by @p sem. It atomically checks the current
+ * value of @p sem. If it is greater than one, it decrements the
+ * semaphore counter by one and the calling thread continue its
+ * execution, flow as usual.  Otherwise, the calling thread sleeps
+ * until another thread performs a call to semaphore_up() on this
+ * semaphore.
+ *
+ * @return Zero if successfully down the @p sem, non-zero otherwize.
+ *
+ * @see SEMAPHORE_INIT(), semaphore_up()
+ */
+PUBLIC int semaphore_trydown(struct semaphore *sem)
+{
+	int ret;
+
+	KASSERT(sem != NULL);
+
+	ret = (-EAGAIN);
+
+	spinlock_lock(&sem->lock);
+
+		if (sem->count > 0)
+		{
+			sem->count--;
+			ret = (0);
+		}
+
+	spinlock_unlock(&sem->lock);
+
+	return (ret);
+}
+
+/*============================================================================*
  * semaphore_up()                                                             *
  *============================================================================*/
 

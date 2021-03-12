@@ -566,6 +566,15 @@
 	EXTERN void semaphore_down(struct semaphore *sem);
 
 	/**
+	 * @brief Tries a down operation in a semaphore.
+	 *
+	 * @param sem Target semaphore.
+	 *
+	 * @return Zero if successfully down the @p sem, non-zero otherwize.
+	 */
+	EXTERN int semaphore_trydown(struct semaphore *sem);
+
+	/**
 	 * @brief Performs an up operation in a semaphore.
 	 *
 	 * @param sem target semaphore.
@@ -862,6 +871,15 @@
 	 * @return Zero if successfully wait for a task, non-zero otherwise.
 	 */
 	EXTERN int task_wait(struct task * task);
+
+	/**
+	 * @brief Tries to wait for a task to complete.
+	 *
+	 * @param task Task pointer.
+	 *
+	 * @return Zero if successfully wait for a task, non-zero otherwise.
+	 */
+	EXTERN int task_trywait(struct task * task);
 
 	/**
 	 * @brief Continue a blocked task.

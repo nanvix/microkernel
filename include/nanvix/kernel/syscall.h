@@ -114,13 +114,14 @@
 	#define NR_task_dispatch       61 /**< kernel_task_dispatch()       */
 	#define NR_task_emit           62 /**< kernel_task_emit()           */
 	#define NR_task_wait           63 /**< kernel_task_wait()           */
-	#define NR_task_continue       64 /**< kernel_task_continue()       */
-	#define NR_task_complete       65 /**< kernel_task_complete()       */
-	#define NR_task_current        66 /**< kernel_task_current()        */
-	#define NR_tlb_shootdown       67 /**< kernel_tlb_shootdown()       */
-	#define NR_thread_stats        68 /**< kernel_thread_stats()        */
+	#define NR_task_trywait        64 /**< kernel_task_trywait()        */
+	#define NR_task_continue       65 /**< kernel_task_continue()       */
+	#define NR_task_complete       66 /**< kernel_task_complete()       */
+	#define NR_task_current        67 /**< kernel_task_current()        */
+	#define NR_tlb_shootdown       68 /**< kernel_tlb_shootdown()       */
+	#define NR_thread_stats        69 /**< kernel_thread_stats()        */
 
-	#define NR_last_kcall          69 /**< NR_SYSCALLS definer          */
+	#define NR_last_kcall          70 /**< NR_SYSCALLS definer          */
 	/**@}*/
 
 /*============================================================================*

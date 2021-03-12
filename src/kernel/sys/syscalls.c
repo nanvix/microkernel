@@ -585,6 +585,12 @@ PUBLIC int do_kcall(
 			);
 			break;
 
+		case NR_task_trywait:
+			ret = task_trywait(
+				(struct task *) arg0
+			);
+			break;
+
 		case NR_task_current:
 		{
 			if ((void *) arg0 != NULL)

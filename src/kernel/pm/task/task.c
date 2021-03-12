@@ -658,6 +658,8 @@ PUBLIC int task_dispatch(struct task * task)
  */
 PUBLIC int task_wait(struct task * task)
 {
+	KASSERT(thread_get_curr() != KTHREAD_DISPATCHER);
+
 	/* Invalid task. */
 	if (UNLIKELY(!task))
 		return (-EINVAL);
@@ -668,6 +670,35 @@ PUBLIC int task_wait(struct task * task)
 
 	/* Waits for all stages be completed. */
 	semaphore_down(&task->sem);
+
+	/* Success. */
+	return (task->args.ret);
+}
+
+/*============================================================================*
+ * task_trywait()                                                             *
+ *============================================================================*/
+
+/**
+ * @brief Wait for a task to complete.
+ *
+ * @param task Task pointer.
+ *
+ * @returns Zero if successfully wait for a task, non-zero otherwise.
+ */
+PUBLIC int task_trywait(struct task * task)
+{
+	/* Invalid task. */
+	if (UNLIKELY(!task))
+		return (-EINVAL);
+
+	/* Invalid state. */
+	if (UNLIKELY(!WITHIN(task->state, TASK_STATE_NOT_STARTED, (TASK_STATE_ERROR + 1))))
+		return (-EINVAL);
+
+	/* Waits for all stages be completed. */
+	if (semaphore_trydown(&task->sem) < 0)
+		return (-EPROTO);
 
 	/* Success. */
 	return (task->args.ret);
