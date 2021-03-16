@@ -658,15 +658,25 @@ PUBLIC int task_dispatch(struct task * task)
  */
 PUBLIC int task_wait(struct task * task)
 {
+	struct section_guard guard;
+
 	KASSERT(thread_get_curr() != KTHREAD_DISPATCHER);
 
 	/* Invalid task. */
 	if (UNLIKELY(!task))
 		return (-EINVAL);
 
-	/* Invalid state. */
-	if (UNLIKELY(!WITHIN(task->state, TASK_STATE_NOT_STARTED, (TASK_STATE_ERROR + 1))))
-		return (-EINVAL);
+	section_guard_init(&guard, &tasks.lock, INTERRUPT_LEVEL_NONE);
+	section_guard_entry(&guard);
+
+		/* Invalid state. */
+		if (UNLIKELY(!WITHIN(task->state, TASK_STATE_NOT_STARTED, (TASK_STATE_ERROR + 1))))
+		{
+			section_guard_exit(&guard);
+			return (-EINVAL);
+		}
+
+	section_guard_exit(&guard);
 
 	/* Waits for all stages be completed. */
 	semaphore_down(&task->sem);
@@ -688,13 +698,23 @@ PUBLIC int task_wait(struct task * task)
  */
 PUBLIC int task_trywait(struct task * task)
 {
+	struct section_guard guard;
+
 	/* Invalid task. */
 	if (UNLIKELY(!task))
 		return (-EINVAL);
 
-	/* Invalid state. */
-	if (UNLIKELY(!WITHIN(task->state, TASK_STATE_NOT_STARTED, (TASK_STATE_ERROR + 1))))
-		return (-EINVAL);
+	section_guard_init(&guard, &tasks.lock, INTERRUPT_LEVEL_NONE);
+	section_guard_entry(&guard);
+
+		/* Invalid state. */
+		if (UNLIKELY(!WITHIN(task->state, TASK_STATE_NOT_STARTED, (TASK_STATE_ERROR + 1))))
+		{
+			section_guard_exit(&guard);
+			return (-EINVAL);
+		}
+
+	section_guard_exit(&guard);
 
 	/* Waits for all stages be completed. */
 	if (semaphore_trydown(&task->sem) < 0)
@@ -805,15 +825,15 @@ PUBLIC void task_tick(void)
 
 	spinlock_lock(&tasks.lock);
 
-	/* Pop some periodic task. */
-	while ((task = periodic_task_dequeue(&tasks.periodics)) != NULL)
-	{
-		__task_dispatch(task);
+		/* Pop some periodic task. */
+		while ((task = periodic_task_dequeue(&tasks.periodics)) != NULL)
+		{
+			__task_dispatch(task);
 
-		/* There is no more task to pop. */
-		if (periodic_task_next_period(&tasks.periodics) != 0)
-			break;
-	}
+			/* There is no more task to pop. */
+			if (periodic_task_next_period(&tasks.periodics) != 0)
+				break;
+		}
 
 	spinlock_unlock(&tasks.lock);
 }
@@ -987,7 +1007,7 @@ PUBLIC void task_init(void)
 	ctask    = NULL;
 	shutdown = false;
 
-	tasks.counter    = 0ULL;
+	tasks.counter    = 1ULL;
 	tasks.actives    = RESOURCE_ARRANGEMENT_INITIALIZER;
 	tasks.waiting    = RESOURCE_ARRANGEMENT_INITIALIZER;
 	tasks.periodics  = RESOURCE_ARRANGEMENT_INITIALIZER;
