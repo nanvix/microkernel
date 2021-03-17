@@ -658,7 +658,8 @@ PUBLIC int task_dispatch(struct task * task)
  */
 PUBLIC int task_wait(struct task * task)
 {
-	struct section_guard guard;
+	int intlvl;
+	int ret = (-EINVAL);
 
 	KASSERT(thread_get_curr() != KTHREAD_DISPATCHER);
 
@@ -666,23 +667,28 @@ PUBLIC int task_wait(struct task * task)
 	if (UNLIKELY(!task))
 		return (-EINVAL);
 
-	section_guard_init(&guard, &tasks.lock, INTERRUPT_LEVEL_NONE);
-	section_guard_entry(&guard);
+	intlvl = interrupts_set_level(INTERRUPT_LEVEL_NONE);
 
-		/* Invalid state. */
-		if (UNLIKELY(!WITHIN(task->state, TASK_STATE_NOT_STARTED, (TASK_STATE_ERROR + 1))))
-		{
-			section_guard_exit(&guard);
-			return (-EINVAL);
-		}
+		spinlock_lock(&tasks.lock);
 
-	section_guard_exit(&guard);
+			/* Invalid state. */
+			if (UNLIKELY(!WITHIN(task->state, TASK_STATE_NOT_STARTED, (TASK_STATE_ERROR + 1))))
+				goto error;
 
-	/* Waits for all stages be completed. */
-	semaphore_down(&task->sem);
+		spinlock_unlock(&tasks.lock);
 
-	/* Success. */
-	return (task->args.ret);
+		/* Waits for all stages be completed. */
+		semaphore_down(&task->sem);
+
+		spinlock_lock(&tasks.lock);
+
+			ret = task->args.ret;
+error:
+		spinlock_unlock(&tasks.lock);
+
+	interrupts_set_level(intlvl);
+
+	return (ret);
 }
 
 /*============================================================================*
@@ -698,6 +704,7 @@ PUBLIC int task_wait(struct task * task)
  */
 PUBLIC int task_trywait(struct task * task)
 {
+	int ret = (-EINVAL);
 	struct section_guard guard;
 
 	/* Invalid task. */
@@ -709,19 +716,21 @@ PUBLIC int task_trywait(struct task * task)
 
 		/* Invalid state. */
 		if (UNLIKELY(!WITHIN(task->state, TASK_STATE_NOT_STARTED, (TASK_STATE_ERROR + 1))))
+			goto error;
+
+		/* Waits for all stages be completed. */
+		if (semaphore_trydown(&task->sem) < 0)
 		{
-			section_guard_exit(&guard);
-			return (-EINVAL);
+			ret = (-EPROTO);
+			goto error;
 		}
 
+		ret = task->args.ret;
+
+error:
 	section_guard_exit(&guard);
 
-	/* Waits for all stages be completed. */
-	if (semaphore_trydown(&task->sem) < 0)
-		return (-EPROTO);
-
-	/* Success. */
-	return (task->args.ret);
+	return (ret);
 }
 
 /*============================================================================*
@@ -854,7 +863,6 @@ PRIVATE void task_handler(int evnum)
 	int ret;
 	int coreid;
 	struct task * task;
-	struct section_guard guard;
 	struct resource_arrangement * emissions;
 
 	KASSERT(evnum == KEVENT_TASK);
@@ -863,15 +871,14 @@ PRIVATE void task_handler(int evnum)
 	emissions = &tasks.emissions[coreid];
 
 	/* We do not want to be interrupted in the critical region. */
-	section_guard_init(&guard, &tasks.lock, INTERRUPT_LEVEL_NONE);
-	section_guard_entry(&guard);
+	spinlock_lock(&tasks.lock);
 
 	/* Endless loop. */
 	while (LIKELY((task = TASK_PTR(resource_dequeue(emissions))) != NULL))
 	{
 			task->state = TASK_STATE_RUNNING;
 
-		section_guard_exit(&guard);
+		spinlock_unlock(&tasks.lock);
 
 		/* Valid function. */
 		KASSERT(task->fn != NULL);
@@ -882,7 +889,7 @@ PRIVATE void task_handler(int evnum)
 		/* Valid return. */
 		KASSERT(WITHIN(ret, TASK_RET_ERROR, TASK_RET_STOP + 1));
 
-		section_guard_entry(&guard);
+		spinlock_lock(&tasks.lock);
 
 			/* Evaluate the return type. */
 			switch (ret)
@@ -903,7 +910,7 @@ PRIVATE void task_handler(int evnum)
 			task = NULL;
 	}
 
-	section_guard_exit(&guard);
+	spinlock_unlock(&tasks.lock);
 }
 
 
@@ -958,7 +965,7 @@ PRIVATE void __task_emit(struct task * task, int coreid)
  */
 PUBLIC int task_emit(struct task * task, int coreid)
 {
-	struct section_guard guard;
+	int intlvl;
 
 	/* Invalid task. */
 	if (UNLIKELY(!task))
@@ -968,24 +975,26 @@ PUBLIC int task_emit(struct task * task, int coreid)
 	if (UNLIKELY(!WITHIN(coreid, 0, CORES_NUM)))
 		return (-EINVAL);
 
-	section_guard_init(&guard, &tasks.lock, INTERRUPT_LEVEL_NONE);
+	intlvl = interrupts_set_level(INTERRUPT_LEVEL_NONE);
 
-	/* Dispatch task. */
-	section_guard_entry(&guard);
-		__task_emit(task, coreid);
-	section_guard_exit(&guard);
+		/* Dispatch task. */
+		spinlock_lock(&tasks.lock);
+			__task_emit(task, coreid);
+		spinlock_unlock(&tasks.lock);
 
-	/* Notify emit events. */
-	if (core_get_id() != coreid)
-	{
-		KASSERT(kevent_notify(KEVENT_TASK, coreid) == 0);
-	}
+		/* Notify emit events. */
+		if (core_get_id() != coreid)
+		{
+			KASSERT(kevent_notify(KEVENT_TASK, coreid) == 0);
+		}
 
-	/* Handle the task. */
-	else
-	{
-		task_handler(KEVENT_TASK);
-	}
+		/* Handle the task. */
+		else
+		{
+			task_handler(KEVENT_TASK);
+		}
+
+	interrupts_set_level(intlvl);
 
 	/* Success. */
 	return (0);
