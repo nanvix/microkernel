@@ -364,23 +364,17 @@
 /*============================================================================*
  *                      Keys Facility                                         *
  *============================================================================*/
-	struct thread_key 
-	{
-		int id;
-		void* value;
-	};
-	
 	/**
 	 * @brief Initializes a key.
 	 *
 	 * @param key Target key.
 	 * @param destructor Optional destructor function, currently unused.
 	 **/
-	EXTERN int thread_key_create(struct thread_key *key, void (*destructor)(*void));
+	EXTERN int thread_key_create(int key, void (*destructor)(*void));
 	
-	EXTERN void* thread_getspecific((struct thread_key key);
+	EXTERN void* thread_getspecific(int key);
 
-	EXTERN int thread_setspecific(struct thread_key key, void *value)
+	EXTERN int thread_setspecific(int key, void *value)
 #endif /* NANVIX_THREAD_H_ */
 
 /**@}*/

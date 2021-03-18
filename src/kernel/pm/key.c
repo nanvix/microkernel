@@ -1,16 +1,37 @@
+#define __NEED_RESOURCE
+
 #include <nanvix/kernel/thread.h>
+
 #define THREAD_KEY_MAX 32
 
-struct thread_key_complete
+struct thread_key
 {
-	struct thread_key key;
-	int tid;
+	struct resource resource;
+
+	int id;
+	void (*destructor)(*void);
 } keys[THREAD_KEY_MAX];
 
-int thread_key_create(thread_key *key, void (*destructor)(*void)) 
+struct thread_key_value 
+{
+	struct resource resource;
+
+	int index;
+	int tid;
+	void *value;
+} key_values[THREAD_KEY_MAX];
+
+PRIVATE const struct resource_pool keyspool = {
+	thread_key, (THREAD_KEY_MAX), sizeof(struct thread_key)
+};
+
+PRIVATE const struct resource_pool keys_valuepool = {
+	thread_key_values, (THREAD_KEY_MAX), sizeof(struct thread_key_value)
+};
+
+int thread_key_create(int key, void (*destructor)(*void)) 
 {
 	UNUSED(destructor);
-	KASSERT(key != NULL);
 
 	key->key->id = -1;
 	key->tid = -1;
@@ -19,7 +40,7 @@ int thread_key_create(thread_key *key, void (*destructor)(*void))
 	return (0);
 }
 
-void* thread_getspecific((struct thread_key key))
+void *thread_getspecific(int key)
 {
 	for (int i = 0; i < THREAD_KEY_MAX; ++1)
 	{
@@ -34,7 +55,7 @@ void* thread_getspecific((struct thread_key key))
 	}
 
 
-int thread_setspecific(struct thread_key key, void *value)
+int thread_setspecific(int thread_key key, void *value)
 {
 	for (int i = 0; i < THREAD_KEY_MAX; ++i)
 	{
