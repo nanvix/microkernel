@@ -22,22 +22,21 @@ struct thread_key_value
 } key_values[THREAD_KEY_MAX];
 
 PRIVATE const struct resource_pool keyspool = {
-	thread_key, (THREAD_KEY_MAX), sizeof(struct thread_key)
+	keys, (THREAD_KEY_MAX), sizeof(struct thread_key)
 };
 
 PRIVATE const struct resource_pool keys_valuepool = {
-	thread_key_values, (THREAD_KEY_MAX), sizeof(struct thread_key_value)
+	key_values, (THREAD_KEY_MAX), sizeof(struct thread_key_value)
 };
 
 int thread_key_create(int key, void (*destructor)(*void)) 
 {
 	UNUSED(destructor);
-
-	key->key->id = -1;
-	key->tid = -1;
-	key->key->value = NULL;
-
-	return (0);
+	
+	if ((keyid = resource_alloc(&keyspool)) >= 0)
+		keys[keyid].id = key;
+	
+	return (keyid);
 }
 
 void *thread_getspecific(int key)
