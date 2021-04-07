@@ -59,7 +59,7 @@
 #if __NANVIX_IKC_USES_ONLY_MAILBOX
 	#define MAILBOX_PORT_NR (64)
 #else
-	#define MAILBOX_PORT_NR (16)
+	#define MAILBOX_PORT_NR (32)
 #endif
 
 	/**
@@ -68,7 +68,7 @@
 #if __NANVIX_IKC_USES_ONLY_MAILBOX
 	#define KMAILBOX_PORT_NR (32)
 #else
-	#define KMAILBOX_PORT_NR (16)
+	#define KMAILBOX_PORT_NR (32)
 #endif
 
 	/**
@@ -118,7 +118,7 @@
 #if __NANVIX_IKC_USES_ONLY_MAILBOX
 	#define KMAILBOX_MESSAGE_BUFFERS_MAX (64)
 #else
-	#define KMAILBOX_MESSAGE_BUFFERS_MAX (32)
+	#define KMAILBOX_MESSAGE_BUFFERS_MAX (256)
 #endif
 
 	/**
@@ -129,7 +129,7 @@
 	 *
 	 * @todo TODO: introduce a check for this.
 	 */
-	#define KMAILBOX_AUX_BUFFERS_MAX (16)
+	#define KMAILBOX_AUX_BUFFERS_MAX (32)
 
 	/**
 	 * @brief Mailbox message buffer max size.
