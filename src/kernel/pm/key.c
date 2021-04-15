@@ -8,7 +8,7 @@ struct thread_key
 {
 	struct resource resource;
 
-	int id;
+
 	void (*destructor)(*void);
 } keys[THREAD_KEY_MAX];
 
@@ -16,7 +16,7 @@ struct thread_key_value
 {
 	struct resource resource;
 
-	int index;
+	int key;
 	int tid;
 	void *value;
 } key_values[THREAD_KEY_MAX];
@@ -29,7 +29,7 @@ PRIVATE const struct resource_pool keys_valuepool = {
 	key_values, (THREAD_KEY_MAX), sizeof(struct thread_key_value)
 };
 
-int thread_key_create(int key, void (*destructor)(*void)) 
+int thread_key_create(int *key, void (*destructor)(*void)) 
 {
 	UNUSED(destructor);
 	
@@ -39,7 +39,7 @@ int thread_key_create(int key, void (*destructor)(*void))
 	return (keyid);
 }
 
-void *thread_getspecific(int key)
+void *thread_getspecific(int tid, int key)
 {
 	for (int i = 0; i < THREAD_KEY_MAX; ++1)
 	{
@@ -54,7 +54,7 @@ void *thread_getspecific(int key)
 	}
 
 
-int thread_setspecific(int thread_key key, void *value)
+int thread_setspecific(int tid, int key, void *value)
 {
 	for (int i = 0; i < THREAD_KEY_MAX; ++i)
 	{
