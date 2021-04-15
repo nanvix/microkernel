@@ -8,7 +8,6 @@ struct thread_key
 {
 	struct resource resource;
 
-
 	void (*destructor)(*void);
 } keys[THREAD_KEY_MAX];
 
@@ -34,7 +33,7 @@ int thread_key_create(int *key, void (*destructor)(*void))
 	UNUSED(destructor);
 	
 	if ((keyid = resource_alloc(&keyspool)) >= 0)
-		keys[keyid].id = key;
+		*key = keyid;
 	
 	return (keyid);
 }
