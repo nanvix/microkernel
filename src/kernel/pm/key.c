@@ -31,11 +31,16 @@ PRIVATE const struct resource_pool keys_valuepool = {
 int thread_key_create(int *key, void (*destructor)(*void)) 
 {
 	UNUSED(destructor);
+	if (key == NULL)
+		return(-EINVAL);
 	
-	if ((keyid = resource_alloc(&keyspool)) >= 0)
+	if (keyid = resource_alloc(&keyspool) < 0)
+		return (-EAGAIN);
+
+	if ((keyid >= 0)
 		*key = keyid;
 	
-	return (keyid);
+	return (0);
 }
 
 void *thread_getspecific(int tid, int key)
@@ -50,9 +55,10 @@ void *thread_getspecific(int tid, int key)
 		else 
 		{
 			return (NULL);
+		}	
 	}
 
-
+}
 int thread_setspecific(int tid, int key, void *value)
 {
 	for (int i = 0; i < THREAD_KEY_MAX; ++i)
@@ -66,3 +72,7 @@ int thread_setspecific(int tid, int key, void *value)
 	}
 	return (0);
 }
+
+int key_isvalid(int key) 
+{
+
