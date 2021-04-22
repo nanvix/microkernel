@@ -46,7 +46,7 @@ int thread_key_create(int *key, void (*destructor)(*void))
 void *thread_getspecific(int tid, int key)
 {
 	
-y	if (tid == NULL)
+	if (tid == NULL)
 		return (-EINVAL);
 	
 	if ((key < 0 ) || (key > 32))
