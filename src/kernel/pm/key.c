@@ -66,7 +66,7 @@ int thread_setspecific(int tid, int key, void *value)
 	if (!WITHIN(key, 0, THREAD_KEY_MAX))
 		return (-EINVAL);
 	
-	if (resource_is_used(&key_values[key].resource));
+	if (resource_is_used(&keys[key].resource));
 		return(-EAGAIN);
 
 	key_values[key].key = key;	
