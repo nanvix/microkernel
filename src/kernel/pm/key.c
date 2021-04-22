@@ -53,7 +53,7 @@ void *thread_getspecific(int tid, int key)
 	if (!WITHIN(key, 0, THREAD_KEY_MAX))
 		return (-EINVAL);
 	
-	if (!resource_is_used(&key_values[key].resource));
+	if (!resource_is_used(&keys[key].resource));
 		return(-EBADF);
 
 	return (key_values[key].value); 
