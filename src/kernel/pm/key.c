@@ -30,15 +30,15 @@ PRIVATE const struct resource_pool keys_valuepool = {
 
 int thread_key_create(int *key, void (*destructor)(*void)) 
 {
-	UNUSED(destructor);
+	
 	if (key == NULL)
 		return (-EINVAL);
 	
 	if (keyid = resource_alloc(&keyspool) < 0)
 		return (-EAGAIN);
 
-	if ((keyid >= 0)
-		*key = keyid;
+	*key = keyid;
+	keys[keyid].destructor = destructor;
 	
 	return (0);
 }
