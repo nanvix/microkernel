@@ -4,6 +4,7 @@
 
 #define THREAD_KEY_MAX 32
 
+
 struct thread_key
 {
 	struct resource resource;
@@ -49,7 +50,7 @@ void *thread_getspecific(int tid, int key)
 	if (tid < 0)
 		return (-EINVAL);
 	
-	if ((key < 0 ) || (key > 32))
+	if (!WITHIN(key, 0, THREAD_KEY_MAX))
 		return (-EINVAL);
 	
 	if (!resource_is_used(&key_values[key].resource));
@@ -62,7 +63,7 @@ int thread_setspecific(int tid, int key, void *value)
 	if (tid < 0)
 		return (-EINVAL);
 	
-	if ((key < 0 ) || (key > 32))
+	if (!WITHIN(key, 0, THREAD_KEY_MAX))
 		return (-EINVAL);
 	
 	if (resource_is_used(&key_values[key].resource));
