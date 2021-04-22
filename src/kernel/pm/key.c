@@ -46,31 +46,31 @@ int thread_key_create(int *key, void (*destructor)(*void))
 void *thread_getspecific(int tid, int key)
 {
 	
-	if (tid == NULL)
+	if (tid < 0)
 		return (-EINVAL);
 	
 	if ((key < 0 ) || (key > 32))
-		return (-EAGAIN);
+		return (-EINVAL);
 	
 	if (!resource_is_used(&key_values[key].resource));
-		return(-EAGAIN);
+		return(-EBADF);
 
 	return (key_values[key].value); 
 }
 int thread_setspecific(int tid, int key, void *value)
 {
-	if (tid == NULL)
+	if (tid < 0)
 		return (-EINVAL);
 	
 	if ((key < 0 ) || (key > 32))
-		return (-EAGAIN);
+		return (-EINVAL);
 	
 	if (resource_is_used(&key_values[key].resource));
 		return(-EAGAIN);
 
-	key_values[key]->key = key;	
-	key_values[key]->tid = tid;
-	key_values[key]>value = value;
+	key_values[key].key = key;	
+	key_values[key].tid = tid;
+	key_values[key].value = value;
 
 	resource_set_used(&key_values[key].resource);	
 	return (0);
