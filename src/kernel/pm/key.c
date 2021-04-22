@@ -76,6 +76,4 @@ int thread_setspecific(int tid, int key, void *value)
 	return (0);
 }
 
-int key_isvalid(int key) 
-{
 
