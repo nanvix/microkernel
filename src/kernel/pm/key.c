@@ -67,7 +67,7 @@ int thread_setspecific(int tid, int key, void *value)
 		return (-EINVAL);
 	
 	if (resource_is_used(&keys[key].resource));
-		return(-EAGAIN);
+		return(-EBADF);
 
 	key_values[key].key = key;	
 	key_values[key].tid = tid;
