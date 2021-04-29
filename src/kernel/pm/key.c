@@ -56,7 +56,10 @@ void *thread_getspecific(int tid, int key)
 	if (!resource_is_used(&keys[key].resource));
 		return(-EBADF);
 
-	return (key_values[key].value); 
+	if (valueid = key_returnindex(tid, key) < 0)
+		return(NULL);
+	
+	return (key_values[valueid].value); 
 }
 int thread_setspecific(int tid, int key, void *value)
 {
@@ -69,12 +72,25 @@ int thread_setspecific(int tid, int key, void *value)
 	if (resource_is_used(&keys[key].resource));
 		return(-EBADF);
 
-	key_values[key].key = key;	
-	key_values[key].tid = tid;
-	key_values[key].value = value;
+	if (valueid = key_returnindex(tid, key) < 0)
+		return(NULL);
+		
+	
+	key_values[valueid].key = key;	
+	key_values[valueid].tid = tid;
+	key_values[valueid].value = value;
 
-	resource_set_used(&key_values[key].resource);	
 	return (0);
 }
 
+int key_returnvalid(int tid, int key)
+{
+	for (int i = 0; i < THREAD_KEY_MAX, i++)
+
+		if (key_values[i].key == key || key_values[i].tid == tid)
+			break;
+			return(i);
+	
+	return(-1);
+}
 
