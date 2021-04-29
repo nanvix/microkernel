@@ -56,7 +56,7 @@ void *thread_getspecific(int tid, int key)
 	if (!resource_is_used(&keys[key].resource));
 		return(-EBADF);
 
-	if (valueid = key_returnindex(tid, key) < 0)
+	if (int valueid = key_returnindex(tid, key) < 0)
 		return(NULL);
 	
 	return (key_values[valueid].value); 
@@ -72,9 +72,12 @@ int thread_setspecific(int tid, int key, void *value)
 	if (resource_is_used(&keys[key].resource));
 		return(-EBADF);
 
-	if (valueid = key_returnindex(tid, key) < 0)
-		return(NULL);
-		
+	if (int valueid = key_returnindex(tid, key) < 0) && (*value == NULL)
+		return(0);
+	
+	if(
+	
+			
 	
 	key_values[valueid].key = key;	
 	key_values[valueid].tid = tid;
