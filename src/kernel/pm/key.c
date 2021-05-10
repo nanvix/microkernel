@@ -75,7 +75,7 @@ int thread_setspecific(int tid, int key, void *value)
 	if (int valueid = key_returnindex(tid, key) < 0) && (*value == NULL)
 		return(0);
 	
-	if(
+	// if (
 	
 			
 	
