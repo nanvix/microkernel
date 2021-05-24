@@ -46,7 +46,8 @@ int thread_key_create(int *key, void (*destructor)(*void))
 
 void *thread_getspecific(int tid, int key)
 {
-	
+	int valueid;
+
 	if (tid < 0)
 		return (-EINVAL);
 	
@@ -55,14 +56,17 @@ void *thread_getspecific(int tid, int key)
 	
 	if (!resource_is_used(&keys[key].resource));
 		return(-EBADF);
-
-	if (int valueid = key_returnindex(tid, key) < 0)
+	
+	valueid = key_returnindex(tid, key); 
+	if (valueid < 0)
 		return(NULL);
 	
 	return (key_values[valueid].value); 
 }
 int thread_setspecific(int tid, int key, void *value)
 {
+	int valueid;
+
 	if (tid < 0)
 		return (-EINVAL);
 	
@@ -71,14 +75,18 @@ int thread_setspecific(int tid, int key, void *value)
 	
 	if (resource_is_used(&keys[key].resource));
 		return(-EBADF);
+	
+	valueid = key_returnindex(tid, key); 
 
-	if (int valueid = key_returnindex(tid, key) < 0) && (*value == NULL)
+	if (valueid < 0) && (*value == NULL)
 		return(0);
-	
-	// if (
-	
+		
+	if (valudid => 0) && (*value == NULL) 
+	{
+		resource_set_unused(&keys_valuespool[valueid]->resource);
+		return(0);
+	}
 			
-	
 	key_values[valueid].key = key;	
 	key_values[valueid].tid = tid;
 	key_values[valueid].value = value;
@@ -86,14 +94,15 @@ int thread_setspecific(int tid, int key, void *value)
 	return (0);
 }
 
-int key_returnvalid(int tid, int key)
+int key_returnindex(int tid, int key)
 {
 	for (int i = 0; i < THREAD_KEY_MAX, i++)
-
-		if (key_values[i].key == key || key_values[i].tid == tid)
-			break;
-			return(i);
-	
+	{
+		if (resource_is_used(&keys_valuespool[i]->resource) 
+			if (key_values[i].key == key || key_values[i].tid == tid)
+				break;
+				return(i);
+	}
 	return(-1);
 }
 
