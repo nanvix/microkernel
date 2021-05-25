@@ -83,7 +83,7 @@ int thread_setspecific(int tid, int key, void *value)
 		
 	if (valudid => 0) && (*value == NULL) 
 	{
-		resource_set_unused(&keys_valuespool[valueid]->resource);
+		resource_set_unused(&keys_values[valueid].resource);
 		return(0);
 	}
 			
@@ -98,7 +98,7 @@ int key_returnindex(int tid, int key)
 {
 	for (int i = 0; i < THREAD_KEY_MAX, i++)
 	{
-		if (resource_is_used(&keys_valuespool[i]->resource) 
+		if (resource_is_used(&keys_values[i].resource) 
 			if (key_values[i].key == key || key_values[i].tid == tid)
 				break;
 				return(i);
