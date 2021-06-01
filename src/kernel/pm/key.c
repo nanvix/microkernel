@@ -1,16 +1,46 @@
-#define __NEED_RESOURCE
+/*
+ * MIT License
+ *
+ * Copyright(c) 2011-2021 The Maintainers of Nanvix
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 
 #include <nanvix/kernel/thread.h>
 
+#define __NEED_RESOURCE
+
 #define THREAD_KEY_MAX 32
 
+/**
+ * @brief Thread's key
+ */
 PRIVATE struct thread_key
 {
 	struct resource resource;
 
-	void (* destructor)(* void);
+	void ( * destructor)( * void);
 } keys[THREAD_KEY_MAX];
 
+/**
+ * @brief Thread key's value
+ */
 PRIVATE struct thread_key_value
 {
 	struct resource resource;
@@ -20,14 +50,26 @@ PRIVATE struct thread_key_value
 	void * value;
 } key_values[THREAD_KEY_MAX];
 
+/**
+ * @brief Resource pool.
+ */
 PRIVATE const struct resource_pool keyspool = {
 	keys, (THREAD_KEY_MAX), sizeof(struct thread_key)
 };
 
+/**
+ * @brief Resource pool.
+ */
 PRIVATE const struct resource_pool keys_valuepool = {
 	key_values, (THREAD_KEY_MAX), sizeof(struct thread_key_value)
 };
 
+/**
+ * @brief Init and configure a new key. 
+ *
+ * @param key The key to be initialized.
+ * @param destructor Destructor that will be associated with the key.
+ */
 PUBLIC int thread_key_create(int * key, void (* destructor)(* void)) 
 {
 	int keyid;
@@ -47,12 +89,20 @@ PUBLIC int thread_key_create(int * key, void (* destructor)(* void))
 	return (0);
 }
 
+/**
+ * @brief Searches for the valid index of the key values array.
+ *
+ * @param tid ID of the target thread.
+ * @param key Key of the target thread.
+ *
+ * @returns Upon sucesss, returns the index found. Upon failure -1 is returned instead.
+ */
 PRIVATE int thread_key_search_value(int tid, int key)
 {
 	for (int i = 0; i < THREAD_KEY_MAX, ++i)
 	{
-		/**/
-		if (!resource_is_used(&keys_values[i].resource))
+		/*G*/
+		if (!resource_is_used(&key_values[i].resource))
 			continue;
 
 		/**/
@@ -65,14 +115,24 @@ PRIVATE int thread_key_search_value(int tid, int key)
 
 	return (-1);
 }
-		    
+
+/**
+ * @brief 
+ *
+ * @param
+ * @param
+ *
+ * @returns
+ */
 PUBLIC void * thread_getspecific(int tid, int key)
 {
 	int valueid;
-
+	
+	/* Invalid tid. */
 	if (tid < 0)
 		return (-EINVAL);
 
+	/* Key not within the limits. */
 	if (!WITHIN(key, 0, THREAD_KEY_MAX))
 		return (-EINVAL);
 
@@ -85,13 +145,24 @@ PUBLIC void * thread_getspecific(int tid, int key)
 	return (key_values[valueid].value); 
 }
 
+/**
+ * @brief 
+ *
+ * @param
+ * @param
+ * @param
+ *
+ * @returns
+ */
 PUBLIC int thread_setspecific(int tid, int key, void * value)
 {
 	int valueid;
-
+	
+	/* Invalid tid. */
 	if (tid < 0)
 		return (-EINVAL);
-
+	
+	/* Key not within the limits. */
 	if (!WITHIN(key, 0, THREAD_KEY_MAX))
 		return (-EINVAL);
 
