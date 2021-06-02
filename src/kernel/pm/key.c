@@ -65,10 +65,12 @@ PRIVATE const struct resource_pool keys_valuepool = {
 };
 
 /**
- * @brief Init and configure a new key. 
+ * @brief Initializes and configure a new key. 
  *
  * @param key The key to be initialized.
  * @param destructor Destructor that will be associated with the key.
+ * 
+ * @returns Upon sucess, returns 0. Else, returns an error.
  */
 PUBLIC int thread_key_create(int * key, void (* destructor)(* void)) 
 {
@@ -101,11 +103,11 @@ PRIVATE int thread_key_search_value(int tid, int key)
 {
 	for (int i = 0; i < THREAD_KEY_MAX, ++i)
 	{
-		/*G*/
+		/* Key is not being used.*/
 		if (!resource_is_used(&key_values[i].resource))
 			continue;
 
-		/**/
+		/* Given key and tid aren't in the array. */
 		if (key_values[i].key != key || key_values[i].tid != tid)
 			continue;
 
@@ -117,12 +119,12 @@ PRIVATE int thread_key_search_value(int tid, int key)
 }
 
 /**
- * @brief 
+ * @brief Return the value associated with the given key and thread
  *
- * @param
- * @param
+ * @param tid ID of the target thread.
+ * @param key Key of the target thread.
  *
- * @returns
+ * @returns Upon sucess, returns the found value. Else, returns an error.
  */
 PUBLIC void * thread_getspecific(int tid, int key)
 {
@@ -146,13 +148,13 @@ PUBLIC void * thread_getspecific(int tid, int key)
 }
 
 /**
- * @brief 
+ * @brief Associates a value with a thread's key.
  *
- * @param
- * @param
- * @param
+ * @param tid ID of the target thread.
+ * @param key Key of the target thread.
+ * @param value Value to be assigned.
  *
- * @returns
+ * @returns Upon sucess, returns 0. Else, returns an error.
  */
 PUBLIC int thread_setspecific(int tid, int key, void * value)
 {

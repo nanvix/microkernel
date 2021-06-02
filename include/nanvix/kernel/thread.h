@@ -361,20 +361,17 @@
 	 * @param sem target semaphore.
 	 */
 	EXTERN void semaphore_up(struct semaphore *sem);
+
 /*============================================================================*
  *                      Keys Facility                                         *
  *============================================================================*/
-	/**
-	 * @brief Initializes a key.
-	 *
-	 * @param key Target key.
-	 * @param destructor Optional destructor function, currently unused.
-	 **/
-	EXTERN int thread_key_create(int key, void (*destructor)(*void));
-	
-	EXTERN void* thread_getspecific(int key);
 
-	EXTERN int thread_setspecific(int key, void *value)
+	EXTERN int thread_key_create(int * key, void ( * destructor)( * void));
+	
+	EXTERN void* thread_getspecific(int tid, int key);
+
+	EXTERN int thread_setspecific(int key, int tid, void *value)
+
 #endif /* NANVIX_THREAD_H_ */
 
 /**@}*/
