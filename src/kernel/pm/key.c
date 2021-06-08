@@ -26,7 +26,9 @@
 
 #define __NEED_RESOURCE
 
-#define THREAD_KEY_MAX 32
+#define THREAD_KEY_MAX 4
+
+#define THREAD_KEY_VALUE_MAX (THRAD_KEY_MAX * THREAD_MAX)
 
 /**
  * @brief Thread's key
@@ -48,7 +50,7 @@ PRIVATE struct thread_key_value
 	int key;
 	int tid;
 	void * value;
-} key_values[THREAD_KEY_MAX];
+} key_values[THREAD_KEY_VALUE_MAX];
 
 /**
  * @brief Resource pool.
@@ -61,18 +63,18 @@ PRIVATE const struct resource_pool keyspool = {
  * @brief Resource pool.
  */
 PRIVATE const struct resource_pool keys_valuepool = {
-	key_values, (THREAD_KEY_MAX), sizeof(struct thread_key_value)
+	key_values, (THREAD_KEY_VALUE_MAX), sizeof(struct thread_key_value)
 };
 
 /**
- * @brief Initializes and configure a new key. 
+ * @brief Initializes and configure a new key.
  *
  * @param key The key to be initialized.
  * @param destructor Destructor that will be associated with the key.
- * 
+ *
  * @returns Upon sucess, returns 0. Else, returns an error.
  */
-PUBLIC int thread_key_create(int * key, void (* destructor)(* void)) 
+PUBLIC int thread_key_create(int * key, void (* destructor)(* void))
 {
 	int keyid;
 
@@ -129,7 +131,7 @@ PRIVATE int thread_key_search_value(int tid, int key)
 PUBLIC void * thread_getspecific(int tid, int key)
 {
 	int valueid;
-	
+
 	/* Invalid tid. */
 	if (tid < 0)
 		return (-EINVAL);
@@ -143,8 +145,8 @@ PUBLIC void * thread_getspecific(int tid, int key)
 
 	if ((valueid = thread_key_search_value(tid, key)) < 0)
 		return (NULL);
-	
-	return (key_values[valueid].value); 
+
+	return (key_values[valueid].value);
 }
 
 /**
@@ -159,11 +161,11 @@ PUBLIC void * thread_getspecific(int tid, int key)
 PUBLIC int thread_setspecific(int tid, int key, void * value)
 {
 	int valueid;
-	
+
 	/* Invalid tid. */
 	if (tid < 0)
 		return (-EINVAL);
-	
+
 	/* Key not within the limits. */
 	if (!WITHIN(key, 0, THREAD_KEY_MAX))
 		return (-EINVAL);
@@ -171,15 +173,15 @@ PUBLIC int thread_setspecific(int tid, int key, void * value)
 	if (resource_is_used(&keys[key].resource));
 		return(-EBADF);
 
-	valueid = thread_key_search_value(tid, key); 
+	valueid = thread_key_search_value(tid, key);
 
 	/* We need to configure a new key value structure. */
 	if (value != NULL)
 	{
 		if ((valueid < 0) && ((valueid = resource_alloc(&keys_valuepool)) < 0))
 			return (-EAGAIN);
-		
-		key_values[valueid].key   = key;	
+
+		key_values[valueid].key   = key;
 		key_values[valueid].tid   = tid;
 		key_values[valueid].value = value;
 	}
