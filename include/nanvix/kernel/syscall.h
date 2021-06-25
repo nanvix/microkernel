@@ -107,8 +107,11 @@
 	#define NR_excp_resume      54 /**< kernel_excp_resume()      */
 	#define NR_cluster_get_num  55 /**< kernel_cluster_get_num()  */
 	#define NR_comm_get_port    56 /**< kernel_comm_get_port()    */
-
-	#define NR_last_kcall       57 /**< NR_SYSCALLS definer      */
+	#define NR_threadkey_create 57 /**< kernel_thread_key_create()*/
+	#define NR_thread_key_get   58 /**< kernel_therad_getspecific()*/
+	#define NR_thread_key_set   59 /**< kernel_thread_setspecific()*/ 
+	
+	#define NR_last_kcall       60 /**< NR_SYSCALLS definer      */
 	/**@}*/
 
 /*============================================================================*
@@ -126,6 +129,9 @@
 	EXTERN int kernel_sleep(void);
 	EXTERN int kernel_wakeup(int);
 	EXTERN int kernel_thread_yield(void);
+	EXTERN int kernel_thread_key_create();
+	EXTERN void * kernel_thrad_getspecific();
+	EXTERN int kernel_thread_setspecific();
 
 	/**
 	 * @brief Shutdowns the kernel.
