@@ -37,7 +37,7 @@ PRIVATE struct thread_key
 {
 	struct resource resource;
 
-	void ( * destructor)( * void);
+	void ( * destructor)(void *);
 } keys[THREAD_KEY_MAX];
 
 /**
@@ -74,7 +74,7 @@ PRIVATE const struct resource_pool keys_valuepool = {
  *
  * @returns Upon sucess, returns 0. Else, returns an error.
  */
-PUBLIC int thread_key_create(int * key, void (* destructor)(* void))
+PUBLIC int thread_key_create(int * key, void (* destructor)(void *))
 {
 	int keyid;
 

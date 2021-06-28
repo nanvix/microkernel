@@ -366,11 +366,11 @@
  *                      Keys Facility                                         *
  *============================================================================*/
 
-	EXTERN int thread_key_create(int * key, void ( * destructor)( * void));
+	EXTERN int thread_key_create(int * key, void (* destructor)(void *));
 	
-	EXTERN void* thread_getspecific(int tid, int key);
+	EXTERN void * thread_getspecific(int tid, int key);
 
-	EXTERN int thread_setspecific(int key, int tid, void *value)
+	EXTERN int thread_setspecific(int key, int tid, void * value)
 
 #endif /* NANVIX_THREAD_H_ */
 

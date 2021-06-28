@@ -1,5 +1,4 @@
-/*
- * MIT License
+/* MIT License
  *
  * Copyright(c) 2011-2020 The Maintainers of Nanvix
  *
@@ -52,66 +51,66 @@
 	 * @name System Call Numbers
 	 */
 	/**@{*/
-	#define NR__exit             1 /**< kernel_exit()             */
-	#define NR_write             2 /**< kernel_write()            */
-	#define NR_thread_get_id     3 /**< kernel_thread_get_id()    */
-	#define NR_thread_create     4 /**< kernel_thread_create()    */
-	#define NR_thread_exit       5 /**< kernel_thread_exit()      */
-	#define NR_thread_join       6 /**< kernel_thread_join()      */
-	#define NR_thread_yield      7 /**< kernel_thread_yield()     */
-	#define NR_sleep             8 /**< kernel_sleep()            */
-	#define NR_wakeup            9 /**< kernel_wakeup()           */
-	#define NR_shutdown         10 /**< kernel_shutdown()         */
-	#define NR_sigctl           11 /**< kernel_sigctl()           */
-	#define NR_alarm            12 /**< kernel_alarm()            */
-	#define NR_sigsend          13 /**< kernel_sigsend()          */
-	#define NR_sigwait          14 /**< kernel_sigwait()          */
-	#define NR_sigreturn        15 /**< kernel_sigreturn()        */
-	#define NR_node_get_num     16 /**< kernel_node_get_num()     */
-	#define NR_sync_create      17 /**< kernel_sync_create()      */
-	#define NR_sync_open        18 /**< kernel_sync_open()        */
-	#define NR_sync_unlink      19 /**< kernel_sync_unlink()      */
-	#define NR_sync_close       20 /**< kernel_sync_close()       */
-	#define NR_sync_wait        21 /**< kernel_sync_wait()        */
-	#define NR_sync_signal      22 /**< kernel_sync_signal()      */
-	#define NR_sync_ioctl       23 /**< kernel_sync_ioctl()       */
-	#define NR_mailbox_create   24 /**< kernel_mailbox_create()   */
-	#define NR_mailbox_open     25 /**< kernel_mailbox_open()     */
-	#define NR_mailbox_unlink   26 /**< kernel_mailbox_unlink()   */
-	#define NR_mailbox_close    27 /**< kernel_mailbox_close()    */
-	#define NR_mailbox_awrite   28 /**< kernel_mailbox_awrite()   */
-	#define NR_mailbox_aread    29 /**< kernel_mailbox_aread()    */
-	#define NR_mailbox_wait     30 /**< kernel_mailbox_wait()     */
-	#define NR_mailbox_ioctl    31 /**< kernel_mailbox_ioctl()    */
-	#define NR_portal_create    32 /**< kernel_portal_create()    */
-	#define NR_portal_allow     33 /**< kernel_portal_allow()     */
-	#define NR_portal_open      34 /**< kernel_portal_open()      */
-	#define NR_portal_unlink    35 /**< kernel_portal_unlink()    */
-	#define NR_portal_close     36 /**< kernel_portal_close()     */
-	#define NR_portal_awrite    37 /**< kernel_portal_awrite()    */
-	#define NR_portal_aread     38 /**< kernel_portal_aread()     */
-	#define NR_portal_wait      39 /**< kernel_portal_wait()      */
-	#define NR_portal_ioctl     40 /**< kernel_portal_ioctl()     */
-	#define NR_clock            42 /**< kernel_clock()            */
-	#define NR_stats            43 /**< kernel_stats()            */
-	#define NR_frame_alloc      44 /**< kernel_frame_alloc()      */
-	#define NR_frame_free       45 /**< kernel_frame_free()       */
-	#define NR_upage_alloc      46 /**< kernel_upage_alloc()      */
-	#define NR_upage_free       47 /**< kernel_upage_free()       */
-	#define NR_upage_map        48 /**< kernel_upage_map()        */
-	#define NR_upage_link       49 /**< kernel_upage_link()       */
-	#define NR_upage_unlink     50 /**< kernel_upage_unlink()     */
-	#define NR_upage_unmap      51 /**< kernel_upage_unmap()      */
-	#define NR_excp_ctrl        52 /**< kernel_excp_ctrl()        */
-	#define NR_excp_pause       53 /**< kernel_excp_pause()       */
-	#define NR_excp_resume      54 /**< kernel_excp_resume()      */
-	#define NR_cluster_get_num  55 /**< kernel_cluster_get_num()  */
-	#define NR_comm_get_port    56 /**< kernel_comm_get_port()    */
-	#define NR_threadkey_create 57 /**< kernel_thread_key_create()*/
-	#define NR_thread_key_get   58 /**< kernel_therad_getspecific()*/
-	#define NR_thread_key_set   59 /**< kernel_thread_setspecific()*/ 
-	
-	#define NR_last_kcall       60 /**< NR_SYSCALLS definer      */
+	#define NR__exit             	1 /**< kernel_exit()               */
+	#define NR_write             	2 /**< kernel_write()              */
+	#define NR_thread_get_id     	3 /**< kernel_thread_get_id()      */
+	#define NR_thread_create     	4 /**< kernel_thread_create()      */
+	#define NR_thread_exit       	5 /**< kernel_thread_exit()        */
+	#define NR_thread_join       	6 /**< kernel_thread_join()        */
+	#define NR_thread_yield      	7 /**< kernel_thread_yield()       */
+	#define NR_sleep             	8 /**< kernel_sleep()              */
+	#define NR_wakeup            	9 /**< kernel_wakeup()             */
+	#define NR_shutdown         	10 /**< kernel_shutdown()          */
+	#define NR_sigctl           	11 /**< kernel_sigctl()            */
+	#define NR_alarm            	12 /**< kernel_alarm()             */
+	#define NR_sigsend          	13 /**< kernel_sigsend()           */
+	#define NR_sigwait          	14 /**< kernel_sigwait()           */
+	#define NR_sigreturn        	15 /**< kernel_sigreturn()         */
+	#define NR_node_get_num     	16 /**< kernel_node_get_num()      */
+	#define NR_sync_create      	17 /**< kernel_sync_create()       */
+	#define NR_sync_open        	18 /**< kernel_sync_open()         */
+	#define NR_sync_unlink      	19 /**< kernel_sync_unlink()       */
+	#define NR_sync_close       	20 /**< kernel_sync_close()        */
+	#define NR_sync_wait        	21 /**< kernel_sync_wait()         */
+	#define NR_sync_signal      	22 /**< kernel_sync_signal()       */
+	#define NR_sync_ioctl       	23 /**< kernel_sync_ioctl()        */
+	#define NR_mailbox_create   	24 /**< kernel_mailbox_create()    */
+	#define NR_mailbox_open     	25 /**< kernel_mailbox_open()      */
+	#define NR_mailbox_unlink   	26 /**< kernel_mailbox_unlink()    */
+	#define NR_mailbox_close    	27 /**< kernel_mailbox_close()     */
+	#define NR_mailbox_awrite   	28 /**< kernel_mailbox_awrite()    */
+	#define NR_mailbox_aread    	29 /**< kernel_mailbox_aread()     */
+	#define NR_mailbox_wait     	30 /**< kernel_mailbox_wait()      */
+	#define NR_mailbox_ioctl    	31 /**< kernel_mailbox_ioctl()     */
+	#define NR_portal_create    	32 /**< kernel_portal_create()     */
+	#define NR_portal_allow     	33 /**< kernel_portal_allow()      */
+	#define NR_portal_open      	34 /**< kernel_portal_open()       */
+	#define NR_portal_unlink    	35 /**< kernel_portal_unlink()     */
+	#define NR_portal_close     	36 /**< kernel_portal_close()      */
+	#define NR_portal_awrite    	37 /**< kernel_portal_awrite()     */
+	#define NR_portal_aread     	38 /**< kernel_portal_aread()      */
+	#define NR_portal_wait      	39 /**< kernel_portal_wait()       */
+	#define NR_portal_ioctl     	40 /**< kernel_portal_ioctl()      */
+	#define NR_clock            	42 /**< kernel_clock()             */
+	#define NR_stats            	43 /**< kernel_stats()             */
+	#define NR_frame_alloc      	44 /**< kernel_frame_alloc()       */
+	#define NR_frame_free       	45 /**< kernel_frame_free()        */
+	#define NR_upage_alloc      	46 /**< kernel_upage_alloc()       */
+	#define NR_upage_free       	47 /**< kernel_upage_free()        */
+	#define NR_upage_map        	48 /**< kernel_upage_map()         */
+	#define NR_upage_link       	49 /**< kernel_upage_link()        */
+	#define NR_upage_unlink     	50 /**< kernel_upage_unlink()      */
+	#define NR_upage_unmap      	51 /**< kernel_upage_unmap()       */
+	#define NR_excp_ctrl        	52 /**< kernel_excp_ctrl()         */
+	#define NR_excp_pause       	53 /**< kernel_excp_pause()        */
+	#define NR_excp_resume      	54 /**< kernel_excp_resume()       */
+	#define NR_cluster_get_num  	55 /**< kernel_cluster_get_num()   */
+	#define NR_comm_get_port    	56 /**< kernel_comm_get_port()     */
+	#define NR_thread_key_create	57 /**< kernel_thread_key_create() */
+	#define NR_thread_getspecific   58 /**< kernel_therad_getspecific()*/
+	#define NR_thread_setspecific   59 /**< kernel_thread_setspecific()*/
+
+	#define NR_last_kcall       	60 /**< NR_SYSCALLS definer      */
 	/**@}*/
 
 /*============================================================================*
@@ -129,9 +128,9 @@
 	EXTERN int kernel_sleep(void);
 	EXTERN int kernel_wakeup(int);
 	EXTERN int kernel_thread_yield(void);
-	EXTERN int kernel_thread_key_create();
-	EXTERN void * kernel_thrad_getspecific();
-	EXTERN int kernel_thread_setspecific();
+	EXTERN int kernel_thread_key_create(int *, void (*)(void *));
+	EXTERN void * kernel_thrad_getspecific(int, int);
+	EXTERN int kernel_thread_setspecific(int, int, void *);
 
 	/**
 	 * @brief Shutdowns the kernel.

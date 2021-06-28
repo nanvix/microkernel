@@ -28,9 +28,9 @@
  * kernel_thread_key_create()                                                     *
  *============================================================================*/
 
-PUBLIC int kernel_thread_key_create(int * key, void (* destructor)(* void)
+PUBLIC int kernel_thread_key_create(int * key, void (* destructor)(void *)
 {
-	if (destructor == NULL)
+	if (key == NULL)
 		return (-EINVAL);	
 
 	return (thread_key_create(key, destructor));
@@ -41,12 +41,6 @@ PUBLIC int kernel_thread_key_create(int * key, void (* destructor)(* void)
 
 PUBLIC void * kernel_thread_getspecific(int tid, int key)
 {
-	if (thread_get_curr_id() != tid) 
-		return (-EINVAL);
-	
-	if (key < 0)
-		return (-EINVAL);
-
 	return (thread_getspefic(tid, key));
 }
 
@@ -56,11 +50,5 @@ PUBLIC void * kernel_thread_getspecific(int tid, int key)
 
 PUBLIC int kernel_thread_setspecific(int tid, int key, void * value)
 {
-        if (thread_get_curr_id() != tid)
-                return (-EINVAL);
-
-        if (key < 0)
-                return (-EINVAL);
-
 	return (thread_setspecific(tid, key, value);
 }
