@@ -1,5 +1,6 @@
-/* MIT License
- *
+/* 
+ * MIT License
+ * 
  * Copyright(c) 2011-2020 The Maintainers of Nanvix
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -107,7 +108,7 @@
 	#define NR_cluster_get_num  	55 /**< kernel_cluster_get_num()   */
 	#define NR_comm_get_port    	56 /**< kernel_comm_get_port()     */
 	#define NR_thread_key_create	57 /**< kernel_thread_key_create() */
-	#define NR_thread_getspecific   58 /**< kernel_therad_getspecific()*/
+	#define NR_thread_getspecific   58 /**< kernel_thread_getspecific()*/
 	#define NR_thread_setspecific   59 /**< kernel_thread_setspecific()*/
 
 	#define NR_last_kcall       	60 /**< NR_SYSCALLS definer      */
@@ -129,7 +130,7 @@
 	EXTERN int kernel_wakeup(int);
 	EXTERN int kernel_thread_yield(void);
 	EXTERN int kernel_thread_key_create(int *, void (*)(void *));
-	EXTERN void * kernel_thrad_getspecific(int, int);
+	EXTERN void * kernel_thread_getspecific(int, int);
 	EXTERN int kernel_thread_setspecific(int, int, void *);
 
 	/**

@@ -370,7 +370,7 @@
 	
 	EXTERN void * thread_getspecific(int tid, int key);
 
-	EXTERN int thread_setspecific(int key, int tid, void * value)
+	EXTERN int thread_setspecific(int tid, int key, void * value);
 
 #endif /* NANVIX_THREAD_H_ */
 

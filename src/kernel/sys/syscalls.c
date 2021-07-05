@@ -120,19 +120,21 @@ PUBLIC void do_kcall2(void)
 					(int)(long) sysboard[coreid].arg0
 				);
 				break;
-			
+					
 			case NR_thread_key_create:
 				ret = kernel_thread_key_create(
 					(int *)(long) sysboard[coreid].arg0,
-					(void)(*)(void *)(long) sysboard[coreid].arg1
+					(void(*)(void *))(long) sysboard[coreid].arg1
 				);
 				break;
+			
 			case NR_thread_getspecific:
-				ret = kernel_thread_getspecific(
+				ret = (word_t)kernel_thread_getspecific(
 					(int)(long) sysboard[coreid].arg0,
 					(int)(long) sysboard[coreid].arg1
 				);
 				break;
+			
 			case NR_thread_setspecific:
 				ret = kernel_thread_setspecific(
 					(int)(long) sysboard[coreid].arg0,

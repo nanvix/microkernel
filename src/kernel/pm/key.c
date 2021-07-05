@@ -22,13 +22,13 @@
  * SOFTWARE.
  */
 
-#include <nanvix/kernel/thread.h>
-
 #define __NEED_RESOURCE
+
+#include <nanvix/kernel/thread.h>
 
 #define THREAD_KEY_MAX 4
 
-#define THREAD_KEY_VALUE_MAX (THRAD_KEY_MAX * THREAD_MAX)
+#define THREAD_KEY_VALUE_MAX (THREAD_KEY_MAX * THREAD_MAX)
 
 /**
  * @brief Thread's key
@@ -103,7 +103,7 @@ PUBLIC int thread_key_create(int * key, void (* destructor)(void *))
  */
 PRIVATE int thread_key_search_value(int tid, int key)
 {
-	for (int i = 0; i < THREAD_KEY_MAX, ++i)
+	for (int i = 0; i < THREAD_KEY_MAX; ++i)
 	{
 		/* Key is not being used.*/
 		if (!resource_is_used(&key_values[i].resource))
@@ -134,18 +134,18 @@ PUBLIC void * thread_getspecific(int tid, int key)
 
 	/* Invalid tid. */
 	if (tid < 0)
-		return (-EINVAL);
-
+		return (NULL);
+	
 	/* Key not within the limits. */
 	if (!WITHIN(key, 0, THREAD_KEY_MAX))
-		return (-EINVAL);
-
-	if (!resource_is_used(&keys[key].resource));
-		return (-EBADF);
-
+		return (NULL);
+	
+	if (!resource_is_used(&keys[key].resource))
+		return (NULL);
+	
 	if ((valueid = thread_key_search_value(tid, key)) < 0)
 		return (NULL);
-
+	
 	return (key_values[valueid].value);
 }
 
@@ -170,7 +170,7 @@ PUBLIC int thread_setspecific(int tid, int key, void * value)
 	if (!WITHIN(key, 0, THREAD_KEY_MAX))
 		return (-EINVAL);
 
-	if (resource_is_used(&keys[key].resource));
+	if (resource_is_used(&keys[key].resource))
 		return(-EBADF);
 
 	valueid = thread_key_search_value(tid, key);
@@ -187,7 +187,7 @@ PUBLIC int thread_setspecific(int tid, int key, void * value)
 	}
 
 	/* We don't need a key value structure anymore. */
-	else if (valueid => 0)
+	else if (valueid >= 0)
 		resource_free(&keys_valuepool, valueid);
 
 	return (0);
