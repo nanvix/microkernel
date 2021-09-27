@@ -676,6 +676,27 @@
 	 */
 	EXTERN void mutex_unlock(struct mutex *m);
 
+/*============================================================================*
+ *                            Thread Keys Facility                            *
+ *============================================================================*/
+
+	/**
+	 * @name Control variables.
+	 */
+	/**@{*/
+	#define THREAD_KEY_MAX 4                                                 /**< Maximum number of keys.           */
+	#define THREAD_KEY_VALUE_PER_KEY (THREAD_MAX)                            /**< Maximum number of values per key. */
+	#define THREAD_KEY_VALUE_MAX (THREAD_KEY_MAX * THREAD_KEY_VALUE_PER_KEY) /**< Maximum number of key values.     */
+	/**@}*/
+
+	EXTERN int thread_key_create(int * key, void (* destructor)(void *));
+
+	EXTERN int thread_key_delete(int key);
+
+	EXTERN int thread_getspecific(int tid, int key, void ** value);
+
+	EXTERN int thread_setspecific(int tid, int key, void * value);
+
 #endif /* NANVIX_THREAD_H_ */
 
 /**@}*/
