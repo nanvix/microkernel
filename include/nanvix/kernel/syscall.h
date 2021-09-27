@@ -48,6 +48,7 @@
 	 * @note This should be set to the highest system call number.
 	 */
 	#define NR_SYSCALLS NR_last_kcall
+
 	/**
 	 * @name System Call Numbers
 	 */
@@ -109,8 +110,12 @@
 	#define NR_excp_resume         56 /**< kernel_excp_resume()         */
 	#define NR_cluster_get_num     57 /**< kernel_cluster_get_num()     */
 	#define NR_comm_get_port       58 /**< kernel_comm_get_port()       */
+	#define NR_thread_key_create   59 /**< kernel_thread_key_create()   */
+	#define NR_thread_key_delete   60 /**< kernel_thread_key_delete()   */
+	#define NR_thread_getspecific  61 /**< kernel_thread_getspecific()  */
+	#define NR_thread_setspecific  62 /**< kernel_thread_setspecific()  */
 
-	#define NR_last_kcall          59 /**< NR_SYSCALLS definer          */
+	#define NR_last_kcall          63 /**< NR_SYSCALLS definer          */
 	/**@}*/
 
 /*============================================================================*
@@ -129,6 +134,10 @@
 	EXTERN int kernel_wakeup(int);
 	EXTERN int kernel_thread_yield(void);
 	EXTERN int kernel_thread_stats(int, uint64_t *, int);
+	EXTERN int kernel_thread_key_create(int *, void (*)(void *));
+	EXTERN int kernel_thread_key_delete(int);
+	EXTERN int kernel_thread_getspecific(int, int, void **);
+	EXTERN int kernel_thread_setspecific(int, int, void *);
 
 	/**
 	 * @brief Shutdowns the kernel.
