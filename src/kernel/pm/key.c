@@ -84,11 +84,11 @@ PRIVATE int thread_key_search_value(int tid, int key)
 	for (int i = 0; i < THREAD_KEY_MAX; ++i)
 	{
 		/* Key is not being used.*/
-		if (!resource_is_used(&key_values[i].resource))
+		if (resource_is_used(&key_values[i].resource))
 			continue;
 
 		/* Given key and tid aren't in the array. */
-		if (key_values[i].key != key || key_values[i].tid != tid)
+		if (key_values[i].key != key && key_values[i].tid != tid)
 			continue;
 
 		/* I Found. */
@@ -214,7 +214,7 @@ PUBLIC int thread_setspecific(int tid, int key, void * value)
 	if (!WITHIN(key, 0, THREAD_KEY_MAX))
 		return (-EINVAL);
 
-	if (resource_is_used(&keys[key].resource))
+	if (!resource_is_used(&keys[key].resource))
 		return(-EBADF);
 
 	valueid = thread_key_search_value(tid, key);
