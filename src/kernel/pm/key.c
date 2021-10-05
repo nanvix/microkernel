@@ -141,17 +141,25 @@ PUBLIC int thread_key_create(int * key, void (* destructor)(void *))
  * @returns On successs, returns 0, otherwise a negative value.
  */
 PUBLIC int thread_key_delete(int key)
-{
+{	
+	int valueid;
+
 	if (!WITHIN(key, 0, THREAD_KEY_MAX))
 		return (-EINVAL);
 
 	if (!resource_is_used(&keys[key].resource))
 		return (-EBADF);
 
+//	if ((valueid = thread_key_search_value(tid, key)) < 0)
+//		return (-1);
+	
 	resource_free(&keyspool, key);
+	
+//	keys_value[valueid].key = NULL;
+//	keys_value[valueid].value = NULL;
 
 	return (0);
-
+//pensar nisso aqui
 }
 
 /*============================================================================*
