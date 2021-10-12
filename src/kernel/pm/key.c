@@ -84,9 +84,9 @@ PRIVATE int thread_key_search_value(int tid, int key)
 	for (int i = 0; i < THREAD_KEY_MAX; ++i)
 	{
 		/* Key is not being used.*/
-		if (resource_is_used(&key_values[i].resource))
+		if (!resource_is_used(&key_values[i].resource)) //confirmar
 			continue;
-
+		
 		/* Given key and tid aren't in the array. */
 		if (key_values[i].key != key && key_values[i].tid != tid)
 			continue;
@@ -142,7 +142,7 @@ PUBLIC int thread_key_create(int * key, void (* destructor)(void *))
  */
 PUBLIC int thread_key_delete(int key)
 {	
-	int valueid;
+//	int valueid;
 
 	if (!WITHIN(key, 0, THREAD_KEY_MAX))
 		return (-EINVAL);
@@ -150,18 +150,17 @@ PUBLIC int thread_key_delete(int key)
 	if (!resource_is_used(&keys[key].resource))
 		return (-EBADF);
 
-//	if ((valueid = thread_key_search_value(tid, key)) < 0)
-//		return (-1);
-	
+	for (int i = 0; i < THREAD_KEY_VALUE_MAX; i++) 
+	{
+		if (key_values[i].key == key)
+		{
+			key_values[i].key = -1;
+			key_values[i].value = NULL; //I believe this not really necessary. thread_setspecific should be called right before thread_key_delete setting @value as NULL
+		}
+	}	
 	resource_free(&keyspool, key);
-	
-//	keys_value[valueid].key = NULL;
-//	keys_value[valueid].value = NULL;
-
 	return (0);
-//pensar nisso aqui
 }
-
 /*============================================================================*
  * thread_key_getspecific()                                                   *
  *============================================================================*/
