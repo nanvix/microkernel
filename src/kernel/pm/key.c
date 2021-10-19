@@ -84,15 +84,16 @@ PRIVATE int thread_key_search_value(int tid, int key)
 	for (int i = 0; i < THREAD_KEY_MAX; ++i)
 	{
 		/* Key is not being used.*/
-		if (!resource_is_used(&key_values[i].resource)) //confirmar
+		if (!resource_is_used(&key_values[i].resource)) 
 			continue;
 		
 		/* Given key and tid aren't in the array. */
-		if (key_values[i].key != key && key_values[i].tid != tid)
-			continue;
+		if ((key_values[i].key != key) || (key_values[i].tid != tid)) // I believe here we should be using OR Gates because of De Morgan's law. We were using (~a) && (~b) but if a tid or a key isn't in the array we don't need to keep searching.
+ 			continue;
 
 		/* I Found. */
 		return (i);
+	
 	}
 
 	return (-1);
