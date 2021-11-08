@@ -88,7 +88,7 @@ PRIVATE int thread_key_search_value(int tid, int key)
 			continue;
 		
 		/* Given key and tid aren't in the array. */
-		if ((key_values[i].key != key) || (key_values[i].tid != tid)) // I believe here we should be using OR Gates because of De Morgan's law. We were using (~a) && (~b) but if a tid or a key isn't in the array we don't need to keep searching.
+		if ((key_values[i].key != key) || (key_values[i].tid != tid)) 
  			continue;
 
 		/* I Found. */
@@ -143,7 +143,6 @@ PUBLIC int thread_key_create(int * key, void (* destructor)(void *))
  */
 PUBLIC int thread_key_delete(int key)
 {	
-//	int valueid;
 
 	if (!WITHIN(key, 0, THREAD_KEY_MAX))
 		return (-EINVAL);
@@ -152,14 +151,15 @@ PUBLIC int thread_key_delete(int key)
 		return (-EBADF);
 
 	for (int i = 0; i < THREAD_KEY_VALUE_MAX; i++) 
-	{
 		if (key_values[i].key == key)
 		{
 			key_values[i].key = -1;
-			key_values[i].value = NULL; //I believe this not really necessary. thread_setspecific should be called right before thread_key_delete setting @value as NULL
+			key_values[i].value = NULL; 
 		}
-	}	
+	
 	resource_free(&keyspool, key);
+	resource_free(&keys_valuepool, key);
+
 	return (0);
 }
 /*============================================================================*
