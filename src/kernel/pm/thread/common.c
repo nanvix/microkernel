@@ -39,7 +39,12 @@ EXTERN void * task_loop(void * args);
 /**
  * @brief Thread table.
  */
-EXTENSION PUBLIC struct thread threads[KTHREAD_MAX] = {
+EXTENSION PUBLIC struct thread *threads[KTHREAD_MAX];
+
+/**
+ * @brief System thread table.
+ */
+EXTENSION PUBLIC struct thread threads_sys[SYS_THREAD_MAX] = {
 	[0] = {
 		.resource = RESOURCE_STATIC_INITIALIZER,
 		.tid      = KTHREAD_MASTER_TID,
@@ -74,19 +79,29 @@ EXTENSION PUBLIC struct thread * curr_threads[CORES_NUM];
 #if CLUSTER_IS_MULTICORE
 
 /**
+ * @brief Thread join conditions for system threads.
+ */
+PUBLIC struct condvar joincond_sys[SYS_THREAD_MAX];
+
+/**
  * @brief Thread join conditions.
  */
-EXTENSION PUBLIC struct condvar joincond[KTHREAD_MAX];
+EXTENSION PUBLIC struct condvar *joincond[KTHREAD_MAX];
+
+/**
+ * @brief User area
+ */
+PUBLIC struct uarea uarea;
 
 /**
  * @brief Number of running threads.
  */
-PUBLIC int nthreads;
+PUBLIC int *nthreads;
 
 /**
  * @brief Next thread ID.
  */
-PUBLIC int next_tid;
+PUBLIC int *next_tid;
 
 /**
  * @brief Thread manager lock.
@@ -109,16 +124,12 @@ PUBLIC spinlock_t lock_curr_tm;
 /**
  * @brief Thread's exit value
  */
-PRIVATE struct exit_value
-{
-	int tid;
-	void * retval;
-} retvals[KTHREAD_EXIT_VALUE_NUM];
+PRIVATE struct exit_value *retvals;
 
 /**
  * @brief Global counter for saving exit values.
  */
-PRIVATE int retval_curr_slot;
+PRIVATE int *retval_curr_slot;
 
 /*============================================================================*
  * thread_save_retval                                                         *
@@ -135,10 +146,10 @@ PUBLIC void thread_save_retval(void* retval, struct thread *leaving_thread)
 	/* Check if retval is a valid pointer*/
 	if (retval)
 	{
-		retvals[retval_curr_slot].tid    = thread_get_id(leaving_thread);
-		retvals[retval_curr_slot].retval = retval;
+		retvals[(*retval_curr_slot)].tid    = thread_get_id(leaving_thread);
+		retvals[(*retval_curr_slot)].retval = retval;
 
-		retval_curr_slot = (retval_curr_slot + 1) % KTHREAD_EXIT_VALUE_NUM;
+		*retval_curr_slot = ((*retval_curr_slot) + 1) % KTHREAD_EXIT_VALUE_NUM;
 	}
 }
 
@@ -257,8 +268,8 @@ PUBLIC struct thread * thread_get(int tid)
 	for (int i = 0; i < KTHREAD_MAX; i++)
 	{
 		/* Found. */
-		if (threads[i].tid == tid)
-			return (&threads[i]);
+		if (threads[i]->tid == tid)
+			return (threads[i]);
 	}
 
 	return (NULL);
@@ -291,21 +302,21 @@ PUBLIC struct thread * thread_alloc(void)
 	for (int i = SYS_THREAD_MAX; i < KTHREAD_MAX; i++)
 	{
 		/* Verify the state of the thread. */
-		switch (threads[i].state)
+		switch (threads[i]->state)
 		{
 			/* Found a free thread. */
 			case THREAD_NOT_STARTED:
-				nthreads++;
+				(*nthreads)++;
 #if !CORE_SUPPORTS_MULTITHREADING
-				threads[i].coreid = i;
-				curr_threads[i]   = &threads[i];
+				threads[i]->coreid = i;
+				curr_threads[i]   = threads[i];
 				break;
 #else
 				break;
 
 			/* Found a zombie thread (frees used kpages). */
 			case THREAD_ZOMBIE:
-				thread_free(&threads[i]);
+				thread_free(threads[i]);
 				break;
 
 #endif
@@ -316,10 +327,10 @@ PUBLIC struct thread * thread_alloc(void)
 		}
 
 		/* Initializes chosen thread. */
-		threads[i].state    = THREAD_READY;
-		threads[i].resource = RESOURCE_INITIALIZER;
+		threads[i]->state    = THREAD_READY;
+		threads[i]->resource = RESOURCE_INITIALIZER;
 
-		return (&threads[i]);
+		return (threads[i]);
 	}
 
 	/* All threads are in use. */
@@ -372,14 +383,14 @@ PUBLIC void __thread_free(struct thread *t)
  */
 PUBLIC void thread_free(struct thread *t)
 {
-	KASSERT(WITHIN(t, &threads[0], &threads[KTHREAD_MAX]));
+	KASSERT(WITHIN(KERNEL_THREAD_ID(t), 0, KTHREAD_MAX));
 
 	__thread_free(t);
 
 	t->coreid = -1;
 	t->state  = THREAD_NOT_STARTED;
 	t->tid    = KTHREAD_NULL_TID;
-	nthreads--;
+	(*nthreads)--;
 }
 
 /*============================================================================*
@@ -467,7 +478,7 @@ PUBLIC int thread_join(int tid, void **retval)
 			if (t->state != THREAD_NOT_STARTED &&
 				t->state != THREAD_TERMINATED &&
 				t->state != THREAD_ZOMBIE)
-				cond_wait(&joincond[KERNEL_THREAD_ID(t)], &lock_tm);
+				cond_wait(joincond[KERNEL_THREAD_ID(t)], &lock_tm);
 		}
 
 		/**
@@ -475,7 +486,7 @@ PUBLIC int thread_join(int tid, void **retval)
 		 * if the @p tid is valid and has already left, just check if it
 		 * is less than the next_tid.
 		 */
-		ret = (tid < next_tid) ? 0 : (-EINVAL);
+		ret = (tid < (*next_tid)) ? 0 : (-EINVAL);
 
 		/**
 		 * This prevents the thread from returning an invalid value.
@@ -552,6 +563,31 @@ PUBLIC int thread_stats(int tid, uint64_t * buffer, int stat)
 
 #endif /* CLUSTER_IS_MULTICORE */
 
+/**
+ * @brief Initialize user area.
+ */
+PUBLIC void uarea_init(void)
+{
+	for (int i = 0; i < SYS_THREAD_MAX; i++)
+	{
+		threads[i] = &threads_sys[i];
+		joincond[i] = &joincond_sys[i];
+	}
+
+	for (int i = SYS_THREAD_MAX; i < KTHREAD_MAX; i++)
+	{
+		threads[i] = &uarea.threads[i - SYS_THREAD_MAX];
+		joincond[i] = &uarea.joincond[i - SYS_THREAD_MAX];
+	}
+
+	nthreads = &uarea.nthreads;
+	next_tid = &uarea.next_tid;
+	retval_curr_slot = &uarea.retval_curr_slot;
+	retvals = uarea.retvals;
+
+	__uarea_init();
+}
+
 
 /*============================================================================*
  * Thread Manager Initialization                                              *
@@ -566,29 +602,30 @@ PUBLIC int thread_stats(int tid, uint64_t * buffer, int stat)
  */
 PUBLIC void thread_init(void)
 {
+	uarea_init();
+	
 	/**
 	 * Initializes global variables.
 	 */
-
-	curr_threads[0] = &threads[0];
+	curr_threads[0] = threads[0];
 
 	/* Initializes user threads. */
 	for (int i = KTHREAD_SERVICE_MAX; i < KTHREAD_MAX; ++i)
 	{
-		threads[i].resource  = RESOURCE_INITIALIZER;
-		threads[i].tid       = KTHREAD_NULL_TID;
-		threads[i].coreid    = -1;
-		threads[i].state     = THREAD_NOT_STARTED;
-		threads[i].affinity  = 0;
-		threads[i].age       = 0ULL;
-		threads[i].core_mode = 0ULL;
-		threads[i].arg       = NULL;
-		threads[i].start     = NULL;
-		threads[i].ctx       = NULL;
+		threads[i]->resource  = RESOURCE_INITIALIZER;
+		threads[i]->tid       = KTHREAD_NULL_TID;
+		threads[i]->coreid    = -1;
+		threads[i]->state     = THREAD_NOT_STARTED;
+		threads[i]->affinity  = 0;
+		threads[i]->age       = 0ULL;
+		threads[i]->core_mode = 0ULL;
+		threads[i]->arg       = NULL;
+		threads[i]->start     = NULL;
+		threads[i]->ctx       = NULL;
 
 #if __NANVIX_MICROKERNEL_THREAD_STATS
-		threads[i].stats.exec_start = 0ULL;
-		threads[i].stats.exec_total = 0ULL;
+		threads[i]->stats.exec_start = 0ULL;
+		threads[i]->stats.exec_total = 0ULL;
 #endif
 	}
 
@@ -599,13 +636,13 @@ PUBLIC void thread_init(void)
 
 	/* Init join conditions. */
 	for (int i = 0; i < KTHREAD_MAX; ++i)
-		cond_init(&joincond[i]);
+		cond_init(joincond[i]);
 
 	/** Init number of running threads. */
-	nthreads = KTHREAD_SERVICE_MAX;
+	*nthreads = KTHREAD_SERVICE_MAX;
 
 	/* Init next thread ID. */
-	next_tid = KTHREAD_SERVICE_MAX;
+	*next_tid = KTHREAD_SERVICE_MAX;
 
 	/* Init thread manager locks. */
 	spinlock_init(&lock_tm);
@@ -619,7 +656,7 @@ PUBLIC void thread_init(void)
 	}
 
 	/* Current slot on retval array. */
-	retval_curr_slot = 0;
+	*retval_curr_slot = 0;
 
 	/* Init dependent args. */
 	__thread_init();

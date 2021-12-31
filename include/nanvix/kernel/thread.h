@@ -228,9 +228,23 @@
 	} ALIGN(CACHE_LINE_SIZE);
 
 	/**
+	 * @brief Thread's exit value
+	 */
+	struct exit_value
+	{
+		int tid;
+		void * retval;
+	};
+
+	/**
 	 * @brief Thread table.
 	 */
-	EXTERN struct thread threads[KTHREAD_MAX];
+	EXTERN struct thread *threads[KTHREAD_MAX];
+
+	/**
+	 * @brief System threads table
+	 */
+	EXTERN struct thread threads_sys[SYS_THREAD_MAX];
 
 	/**
 	 * @name Thread IDs.
@@ -249,13 +263,13 @@
 	/**
 	 * @brief Master thread.
 	 */
-	#define KTHREAD_MASTER (&threads[0])
+	#define KTHREAD_MASTER (threads[0])
 
 	/**
 	 * @brief Dispatcher thread.
 	 */
 #if __NANVIX_USE_TASKS
-	#define KTHREAD_DISPATCHER (&threads[1])
+	#define KTHREAD_DISPATCHER (threads[1])
 #else
 	#define KTHREAD_DISPATCHER (NULL)
 #endif

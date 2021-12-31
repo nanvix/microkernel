@@ -32,6 +32,7 @@
 	#include <nanvix/kernel/thread.h>
 	#include <nanvix/kernel/event.h>
 	#include <nanvix/kernel/mm.h>
+	#include <nanvix/kernel/uarea.h>
 	#include <nanvix/const.h>
 	#include <posix/errno.h>
 
@@ -42,13 +43,30 @@
 
 	/**
 	 * @brief Kernel thread ID.
+	 *
+	 * @details Threads is a thread pointer array. A pointer can either point
+	 * to a system thread or user thread, which are stored respectivally in
+	 * the threads_sys array and user_area.threads. Here we check where _t is 
+	 * located to get it's offset in threads array.
 	 */
-	#define KERNEL_THREAD_ID(_t) (_t - threads)
+	#define KERNEL_THREAD_ID(_t) \
+		((WITHIN(_t, &threads_sys[0], &threads_sys[SYS_THREAD_MAX])) ? \
+		_t - &threads_sys[0] : (_t - threads[SYS_THREAD_MAX]) + SYS_THREAD_MAX)
+
+	/**
+	 * @brief User area
+	 */
+	EXTENSION EXTERN struct uarea uarea;
+
+	/**
+	 * @brief System threads table
+	 */
+	EXTENSION EXTERN struct thread threads_sys[SYS_THREAD_MAX];
 
 	/**
 	 * @brief Thread table.
 	 */
-	EXTENSION EXTERN struct thread threads[KTHREAD_MAX];
+	EXTENSION EXTERN struct thread *threads[KTHREAD_MAX];
 
 	/**
 	 * @brief Running Threads.
@@ -90,19 +108,24 @@
 #if CLUSTER_IS_MULTICORE
 
 	/**
+	 * @brief System thread join conditions
+	 */
+	EXTERN struct condvar joincond_sys[SYS_THREAD_MAX];
+
+	/**
 	 * @brief Thread join conditions.
 	 */
-	EXTENSION EXTERN struct condvar joincond[KTHREAD_MAX];
+	EXTENSION EXTERN struct condvar *joincond[KTHREAD_MAX];
 
 	/**
 	 * @brief Number of running threads.
 	 */
-	EXTERN int nthreads;
+	EXTERN int *nthreads;
 
 	/**
 	 * @brief Next thread ID.
 	 */
-	EXTERN int next_tid;
+	EXTERN int *next_tid;
 
 	/**
 	 * @brief Thread manager lock.
@@ -244,7 +267,7 @@
 	 */
 	/**@{*/
 	#define idle_threads (KTHREAD_MASTER + KTHREAD_SERVICE_MAX)
-	#define user_threads (KTHREAD_MASTER + SYS_THREAD_MAX)
+	#define user_threads (uarea.threads)
 	/**@}*/
 
 	/**
@@ -284,6 +307,11 @@
 	 * @brief Initialize thread system.
 	 */
 	EXTERN void __thread_init(void);
+
+	/**
+	 * @brief Initialize user area.
+	 */
+	EXTERN void __uarea_init(void);
 
 #endif /* CLUSTER_IS_MULTICORE */
 #endif /* KERNEL_THREAD_COMMON_H_ */

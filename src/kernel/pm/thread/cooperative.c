@@ -72,7 +72,7 @@ PUBLIC NORETURN void thread_exit(void *retval)
 			thread_free(curr);
 
 			/* Notify waiting threads. */
-			cond_broadcast(&joincond[mycoreid]);
+			cond_broadcast(joincond[mycoreid]);
 
 		thread_unlock_tm(&guard);
 
@@ -131,7 +131,7 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 		}
 
 		/* Get thread ID. */
-		_tid = next_tid++;
+		_tid = (*next_tid)++;
 
 		/* Initialize thread structure. */
 		new_thread->tid   = _tid;
@@ -173,6 +173,14 @@ PUBLIC int thread_create(int *tid, void*(*start)(void*), void *arg)
 	}
 
 	return (ret);
+}
+
+/**
+ * @brief Dummy Initialize user area.
+ */
+PUBLIC void __uarea_init(void)
+{
+
 }
 
 /*============================================================================*
