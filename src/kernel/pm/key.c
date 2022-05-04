@@ -247,12 +247,12 @@ PUBLIC int thread_setspecific(int tid, int key, void * value)
 	return (0);
 }
 
-PUBLIC void thread_key_exit(int tid,  int * ret)
+PUBLIC void thread_key_exit(int tid,  int * retv)
 {
 	int key, key_id;
 
 	if (tid < 0)
-		*ret = -1;
+		*retv = -1;
 	
 	for (int i = 0; i < THREAD_KEY_VALUE_MAX; ++i)
 		if (tid == key_values[i].tid)
@@ -263,7 +263,7 @@ PUBLIC void thread_key_exit(int tid,  int * ret)
 			key_id = i;
 
 	if (!resource_is_used(&keys[key_id].resource))
-			*ret = -1;
+			*retv = -1;
 	
 	if ((&key_values[key].value != NULL) && (&keys[key_id].destructor != NULL))
 		{

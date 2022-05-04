@@ -697,7 +697,7 @@
 
 	EXTERN int thread_setspecific(int tid, int key, void * value);
 
-	EXTERN void thread_key_exit(int tid, int * ret);
+	EXTERN void thread_key_exit(int tid, int * retv);
 
 #endif /* NANVIX_THREAD_H_ */
 

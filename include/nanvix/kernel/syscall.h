@@ -114,8 +114,9 @@
 	#define NR_thread_key_delete   60 /**< kernel_thread_key_delete()   */
 	#define NR_thread_getspecific  61 /**< kernel_thread_getspecific()  */
 	#define NR_thread_setspecific  62 /**< kernel_thread_setspecific()  */
+	#define NR_thread_key_exit     63 /**< kernel_thread_key_exit()	    */
 
-	#define NR_last_kcall          63 /**< NR_SYSCALLS definer          */
+	#define NR_last_kcall          64 /**< NR_SYSCALLS definer          */
 	/**@}*/
 
 /*============================================================================*
@@ -138,7 +139,7 @@
 	EXTERN int kernel_thread_key_delete(int);
 	EXTERN int kernel_thread_getspecific(int, int, void **);
 	EXTERN int kernel_thread_setspecific(int, int, void *);
-
+	EXTERN int kernel_thread_key_exit(int, int *);
 	/**
 	 * @brief Shutdowns the kernel.
 	 *

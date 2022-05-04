@@ -158,6 +158,13 @@ PUBLIC void do_kcall2(void)
 					(void *)(long) sysboard[coreid].arg2
 				);
 				break;
+			
+			case NR_thread_key_exit:
+				ret = kernel_thread_key_exit(
+					(int)(long) sysboard[coreid].arg0,
+					(int *)(long) sysboard[coreid].arg1
+				);
+				break;
 
 #endif
 

@@ -63,3 +63,11 @@ PUBLIC int kernel_thread_key_delete(int key)
 	return (thread_key_delete(key));
 }
 
+/*============================================================================*
+ * kernel_thread_key_exit()                                                   *
+ *============================================================================*/
+
+PUBLIC void kernel_thread_key_exit(int tid, int * retv)
+{
+	return (thread_key_exit(tid, retv));
+}
