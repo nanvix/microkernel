@@ -647,7 +647,7 @@ PUBLIC NORETURN void thread_exit(void *retval)
 {
 	struct thread * curr;
 	struct section_guard guard; /* Section guard.    */
-
+	int * ret = NULL;
 	/* Gets current thread information. */
 	curr = thread_get_curr();
 
@@ -666,6 +666,10 @@ PUBLIC NORETURN void thread_exit(void *retval)
 
 		/* Saves the retval of current thread. */
 		thread_save_retval(retval, curr);
+		
+		/* Release thread key related values */
+		
+		thread_key_exit(curr->tid, ret);
 
 		/**
 		 * To schedule another user thread without use idle thread has

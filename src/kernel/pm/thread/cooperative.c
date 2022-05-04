@@ -51,6 +51,7 @@
 PUBLIC NORETURN void thread_exit(void *retval)
 {
 	int mycoreid;
+	int * ret = NULL;
 	struct thread * curr;
 	struct section_guard guard; /* Section guard.    */
 
@@ -67,7 +68,10 @@ PUBLIC NORETURN void thread_exit(void *retval)
 
 			/* Saves the retval of current thread. */
 			thread_save_retval(retval, curr);
-
+			
+			/* Release thread key related values */
+			thread_key_exit(curr->tid, ret);
+			
 			/* Release thread structure. */
 			thread_free(curr);
 

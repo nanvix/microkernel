@@ -143,6 +143,7 @@ PUBLIC int thread_key_create(int * key, void (* destructor)(void *))
  */
 PUBLIC int thread_key_delete(int key)
 {	
+	int val_flag;
 
 	if (!WITHIN(key, 0, THREAD_KEY_MAX))
 		return (-EINVAL);
@@ -155,10 +156,11 @@ PUBLIC int thread_key_delete(int key)
 		{
 			key_values[i].key = -1;
 			key_values[i].value = NULL; 
+			val_flag = i;
 		}
 	
 	resource_free(&keyspool, key);
-	resource_free(&keys_valuepool, key);
+	resource_free(&keys_valuepool, key_values[val_flag].key);
 
 	return (0);
 }
@@ -243,5 +245,31 @@ PUBLIC int thread_setspecific(int tid, int key, void * value)
 		resource_free(&keys_valuepool, valueid);
 
 	return (0);
+}
+
+PUBLIC void thread_key_exit(int tid,  int * ret)
+{
+	int key, key_id;
+
+	if (tid < 0)
+		*ret = -1;
+	
+	for (int i = 0; i < THREAD_KEY_VALUE_MAX; ++i)
+		if (tid == key_values[i].tid)
+			key = key_values[i].key;
+	
+	for (int i = 0; i < THREAD_KEY_MAX; ++i)
+		if (key == i)
+			key_id = i;
+
+	if (!resource_is_used(&keys[key_id].resource))
+			*ret = -1;
+	
+	if ((&key_values[key].value != NULL) && (&keys[key_id].destructor != NULL))
+		{
+			key_values[key].value = NULL;
+			keys[key_id].destructor(&key_values[key].value);
+		
+		}	
 }
 
