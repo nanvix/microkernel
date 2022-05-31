@@ -22,45 +22,19 @@
  * SOFTWARE.
  */
 
+#include <nanvix/kernel/uarea.h>
 
-#ifndef NANVIX_UAREA_H_
-#define NANVIX_UAREA_H_
 
-	#include <nanvix/kernel/thread.h>
+// freeze the cluster
+void kernel_freeze()
+{
+	uarea.freezing = 1;
+	// kevent for n - 1 cores
+}
 
-	/**
-	 * @brief User area
-	 */
-	struct uarea
-	{
-		// thread Management
-		int nthreads;                /* Number of running threads.             */
-		int next_tid;                /* Next thread ID.                        */
-		int retval_curr_slot;        /* Global counter for saving exit values. */
-
-		struct thread threads[THREAD_MAX];                 /* User threads.           */
-		struct condvar joincond[THREAD_MAX];               /* Thread join conditions. */
-		struct exit_value retvals[KTHREAD_EXIT_VALUE_NUM]; /* Thread's exit value.    */
-
-		int freezing;
-
-#if CLUSTER_IS_MULTICORE && CORE_SUPPORTS_MULTITHREADING
-
-		struct resource_arrangement scheduling; /* Schedule queues. */
-		struct stack *ustacks[THREAD_MAX];      /* User stacks.     */
-		struct stack *kstacks[THREAD_MAX];      /* Kernel stacks.   */
-
-#endif
-	};
-
-	/**
-	 * @brief User area
-	 */
-	EXTERN struct uarea uarea;
-
-	/**
-	 * @brief Initialize the user area
-	 */
-	EXTERN void uarea_init(void);
-
-#endif
+// unfreeze the cluster
+void kernel_unfreeze()
+{
+	uarea.freezing = 0;
+	// kevent for n - 1 cores
+}

@@ -104,6 +104,11 @@ PUBLIC int *nthreads;
 PUBLIC int *next_tid;
 
 /**
+ * @brief Is the cluster freezing?
+ */
+PUBLIC int *freezing;
+
+/**
  * @brief Thread manager lock.
  */
 PUBLIC spinlock_t lock_tm;
@@ -584,6 +589,8 @@ PUBLIC void uarea_init(void)
 	next_tid = &uarea.next_tid;
 	retval_curr_slot = &uarea.retval_curr_slot;
 	retvals = uarea.retvals;
+	uarea.freezing = 0;
+	freezing = &uarea.freezing;
 
 	__uarea_init();
 }

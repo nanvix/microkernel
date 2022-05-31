@@ -346,43 +346,55 @@ PUBLIC int thread_yield(void)
 	/**
 	 * Gets next thread.
 	 */
-
-		/* Is there any user thread to schedule? */
-		if ((next = thread_schedule_next()) != NULL)
+		if ((*freezing) && coreid != COREID_MASTER)
 		{
-			/* Thread not exit the core yet? */
-			if (UNLIKELY(next->ctx == NULL))
-			{
-				thread_schedule(next);
-				next = NULL;
-			}
-		}
-
-		/* Valid next? */
-		if  (next)
-		{
-			if (curr->state == THREAD_RUNNING)
-				curr->state = THREAD_STOPPED;
-		}
-
-		/* There are no other threads and I can continue. */
-		else if (curr->state == THREAD_RUNNING)
-		{
-			/* Does curr still have an affinity to the underlying core? */
-			if (KTHREAD_AFFINITY_MATCH(curr->affinity, (1 << coreid)))
-				next = curr;
-
-			/* Lose affinity. */
-			else
-			{
-				curr->state = THREAD_STOPPED;
-				next = idle;
-			}
-		}
-
-		/* I finish and there are no other threads. Switch to idle. */
-		else
 			next = idle;
+			if (curr != idle)
+			{
+				if (curr->state == THREAD_RUNNING)
+					curr->state = THREAD_STOPPED;
+			}
+		}
+		else
+		{
+
+			/* Is there any user thread to schedule? */
+			if ((next = thread_schedule_next()) != NULL)
+			{
+				/* Thread not exit the core yet? */
+				if (UNLIKELY(next->ctx == NULL))
+				{
+					thread_schedule(next);
+					next = NULL;
+				}
+			}
+
+			/* Valid next? */
+			if (next)
+			{
+				if (curr->state == THREAD_RUNNING)
+					curr->state = THREAD_STOPPED;
+			}
+
+			/* There are no other threads and I can continue. */
+			else if (curr->state == THREAD_RUNNING)
+			{
+				/* Does curr still have an affinity to the underlying core? */
+				if (KTHREAD_AFFINITY_MATCH(curr->affinity, (1 << coreid)))
+					next = curr;
+
+				/* Lose affinity. */
+				else
+				{
+					curr->state = THREAD_STOPPED;
+					next = idle;
+				}
+			}
+
+			/* I finish and there are no other threads. Switch to idle. */
+			else
+				next = idle;
+		}
 
 	/**
 	 * Configure the next thread.

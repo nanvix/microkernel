@@ -105,6 +105,7 @@
 	#define NR_upage_unlink        52 /**< kernel_upage_unlink()        */
 	#define NR_upage_unmap         53 /**< kernel_upage_unmap()         */
 	#define NR_excp_ctrl           54 /**< kernel_excp_ctrl()           */
+<<<<<<< HEAD
 	#define NR_excp_set_handler    55 /**< kernel_excp_set_handler()    */
 	#define NR_excp_pause          56 /**< kernel_excp_pause()          */
 	#define NR_excp_resume         57 /**< kernel_excp_resume()         */
@@ -123,6 +124,8 @@
 	#define NR_task_continue       70 /**< kernel_task_continue()       */
 	#define NR_task_complete       71 /**< kernel_task_complete()       */
 	#define NR_task_current        72 /**< kernel_task_current()        */
+	#define NR_freeze              72 /**< kernel_freeze()              */
+	#define NR_unfreeze            73 /**< kernel_unfreeze()            */
 
 	#define NR_last_kcall          73 /**< NR_SYSCALLS definer          */
 	/**@}*/
@@ -218,6 +221,18 @@
 	EXTERN void kernel_sigreturn(void);
 
 #endif /* __NANVIX_MICROKERNEL */
+
+/*============================================================================*
+ * Migration Management Kernel calls                                          *
+ *============================================================================*/
+
+#ifdef __NANVIX_MICROKERNEL
+
+	EXTERN void kernel_freeze(void);
+
+	EXTERN void kernel_unfreeze(void);
+
+#endif
 
 /*============================================================================*
  * Memory Management Kernel Calls                                             *

@@ -60,6 +60,8 @@
 	/**@{*/
 	extern void test_network(void);
 
+	extern void test_freeze(void);
+
 	/**@}*/
 
 	/**

@@ -352,6 +352,14 @@ PUBLIC void do_kcall2(void)
 				(vaddr_t) sysboard[coreid].arg1
 			);
 			break;
+		
+		case NR_freeze:
+			kernel_freeze();
+			break;
+		
+		case NR_unfreeze:
+			kernel_unfreeze();
+			break;
 
 #if (THREAD_MAX > 1)
 

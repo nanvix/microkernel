@@ -53,7 +53,7 @@ int main(int argc, const char *argv[])
  *
  * @returns The length of the string.
  */
-size_t strlen(const char *str)
+size_t nanvix_strlen(const char *str)
 {
 	const char *p;
 
@@ -76,7 +76,7 @@ void nanvix_puts(const char *str)
 {
 	size_t len;
 
-	len = strlen(str);
+	len = nanvix_strlen(str);
 
 	kcall3(
 		NR_write,
@@ -101,9 +101,13 @@ void ___start(int argc, const char *argv[])
 	((void) argc);
 	((void) argv);
 
+// freeze test in CC cluster
+
 	#if __NANVIX_HAS_NETWORK
-		test_network();
+		//test_network();
 	#endif
+	kprintf("c = %d %d", kernel_cluster_get_num(), kernel_node_get_num());
+	test_freeze();
 
 	/* Halt. */
 	kcall0(NR_shutdown);

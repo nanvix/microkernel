@@ -128,6 +128,11 @@
 	EXTERN int *next_tid;
 
 	/**
+	 * @brief is the cluster freezing?
+	 */
+	EXTERN int *freezing;
+
+	/**
 	 * @brief Thread manager lock.
 	 */
 	EXTERN spinlock_t lock_tm;
