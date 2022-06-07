@@ -23,18 +23,27 @@
  */
 
 #include <nanvix/kernel/uarea.h>
+#include <nanvix/hal/cluster.h>
 
 
 // freeze the cluster
 void kernel_freeze()
 {
 	uarea.freezing = 1;
-	// kevent for n - 1 cores
+	for (int coreid = 0; coreid < CORES_NUM)
+	{
+		if (coreid != COREID_MASTER)
+			KASSERT(kevent_notify(KEVENT_SCHED, coreid))
+	}
 }
 
 // unfreeze the cluster
 void kernel_unfreeze()
 {
 	uarea.freezing = 0;
-	// kevent for n - 1 cores
+	for (int coreid = 0; coreid < CORES_NUM)
+	{
+		if (coreid != COREID_MASTER)
+			KASSERT(kevent_notify(KEVENT_SCHED, coreid))
+	}
 }

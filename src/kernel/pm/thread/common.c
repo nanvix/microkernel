@@ -106,7 +106,7 @@ PUBLIC int *next_tid;
 /**
  * @brief Is the cluster freezing?
  */
-PUBLIC int *freezing;
+PUBLIC int *freezing = &uarea.freezing
 
 /**
  * @brief Thread manager lock.
@@ -590,7 +590,6 @@ PUBLIC void uarea_init(void)
 	retval_curr_slot = &uarea.retval_curr_slot;
 	retvals = uarea.retvals;
 	uarea.freezing = 0;
-	freezing = &uarea.freezing;
 
 	__uarea_init();
 }
