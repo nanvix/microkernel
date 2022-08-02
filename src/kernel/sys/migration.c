@@ -24,16 +24,23 @@
 
 #include <nanvix/kernel/uarea.h>
 #include <nanvix/hal/cluster.h>
+#include <nanvix/kernel/event.h>
+#include <nanvix/kernel/syscall.h>
 
+
+int kernel_user_syscall_lookup(void)
+{
+	return (sysboard_user_syscall_lookup());
+}
 
 // freeze the cluster
 void kernel_freeze()
 {
 	uarea.freezing = 1;
-	for (int coreid = 0; coreid < CORES_NUM)
+	for (int coreid = 0; coreid < CORES_NUM; coreid++)
 	{
 		if (coreid != COREID_MASTER)
-			KASSERT(kevent_notify(KEVENT_SCHED, coreid))
+			KASSERT(kevent_notify(KEVENT_SCHED, coreid) == 0);
 	}
 }
 
@@ -41,9 +48,9 @@ void kernel_freeze()
 void kernel_unfreeze()
 {
 	uarea.freezing = 0;
-	for (int coreid = 0; coreid < CORES_NUM)
+	for (int coreid = 0; coreid < CORES_NUM; coreid++)
 	{
 		if (coreid != COREID_MASTER)
-			KASSERT(kevent_notify(KEVENT_SCHED, coreid))
+			KASSERT(kevent_notify(KEVENT_SCHED, coreid) == 0);
 	}
 }

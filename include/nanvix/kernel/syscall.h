@@ -26,6 +26,7 @@
 #define NANVIX_SYSCALL_H_
 
 	#include <nanvix/kernel/mm.h>
+	#include <nanvix/hal/cluster.h>
 #ifdef __NANVIX_MICROKERNEL
 	#include <nanvix/kernel/excp.h>
 	#include <nanvix/kernel/thread.h>
@@ -35,6 +36,20 @@
 	#include <nanvix/kernel/signal.h>
 	#include <nanvix/const.h>
 #endif /* __NANVIX_MICROKERNEL */
+
+	struct sysboard
+	{
+		word_t arg0;             /**< First argument of system call.           */
+		word_t arg1;             /**< Second argument of system call.          */
+		word_t arg2;             /**< Third argument of system call.           */
+		word_t arg3;             /**< Fourth argument of system call.          */
+		word_t arg4;             /**< Fifth argument of system call.           */
+		word_t syscall_nr;       /**< System call number.                      */
+		word_t ret;              /**< Return value of system call.             */
+		struct semaphore syssem; /**< Semaphore to wait a syscall to complete. */
+		struct mutex sysmutex;   /**< Reserve the sysboard by a thread.        */
+		int pending;
+	};
 
 /**
  * @addtogroup kernel-syscalls System Calls
@@ -105,7 +120,6 @@
 	#define NR_upage_unlink        52 /**< kernel_upage_unlink()        */
 	#define NR_upage_unmap         53 /**< kernel_upage_unmap()         */
 	#define NR_excp_ctrl           54 /**< kernel_excp_ctrl()           */
-<<<<<<< HEAD
 	#define NR_excp_set_handler    55 /**< kernel_excp_set_handler()    */
 	#define NR_excp_pause          56 /**< kernel_excp_pause()          */
 	#define NR_excp_resume         57 /**< kernel_excp_resume()         */
@@ -124,10 +138,11 @@
 	#define NR_task_continue       70 /**< kernel_task_continue()       */
 	#define NR_task_complete       71 /**< kernel_task_complete()       */
 	#define NR_task_current        72 /**< kernel_task_current()        */
-	#define NR_freeze              72 /**< kernel_freeze()              */
-	#define NR_unfreeze            73 /**< kernel_unfreeze()            */
+	#define NR_freeze              73 /**< kernel_freeze()              */
+	#define NR_unfreeze            74 /**< kernel_unfreeze()            */
+	#define NR_user_syscall_lookup 75 /**< kernel_user_syscall_lookup() */
 
-	#define NR_last_kcall          73 /**< NR_SYSCALLS definer          */
+	#define NR_last_kcall          76 /**< NR_SYSCALLS definer          */
 	/**@}*/
 
 /*============================================================================*
@@ -232,7 +247,16 @@
 
 	EXTERN void kernel_unfreeze(void);
 
+	EXTERN int kernel_user_syscall_lookup(void);
+
+/*============================================================================*
+ * Migration Auxiliar functions                                               *
+ *============================================================================*/
+
+	EXTERN int sysboard_user_syscall_lookup(void);
+
 #endif
+
 
 /*============================================================================*
  * Memory Management Kernel Calls                                             *

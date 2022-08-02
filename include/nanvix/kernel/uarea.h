@@ -27,6 +27,7 @@
 #define NANVIX_UAREA_H_
 
 	#include <nanvix/kernel/thread.h>
+	#include <nanvix/kernel/syscall.h>
 
 	/**
 	 * @brief User area
@@ -51,6 +52,7 @@
 		struct stack *kstacks[THREAD_MAX];      /* Kernel stacks.   */
 
 #endif
+		struct sysboard *sysboard;
 	};
 
 	/**

@@ -106,7 +106,7 @@ PUBLIC int *next_tid;
 /**
  * @brief Is the cluster freezing?
  */
-PUBLIC int *freezing = &uarea.freezing
+PUBLIC int *freezing = &uarea.freezing;
 
 /**
  * @brief Thread manager lock.

@@ -26,6 +26,7 @@
 #include <nanvix/hal.h>
 #include <nanvix/kernel/thread.h>
 #include <nanvix/kernel/syscall.h>
+#include <nanvix/kernel/uarea.h>
 #include <nanvix/hlib.h>
 #include <posix/errno.h>
 
@@ -37,19 +38,7 @@ PRIVATE struct semaphore syssem;
 /**
  * @brief System call scoreboard.
  */
-PRIVATE struct sysboard
-{
-	word_t arg0;             /**< First argument of system call.           */
-	word_t arg1;             /**< Second argument of system call.          */
-	word_t arg2;             /**< Third argument of system call.           */
-	word_t arg3;             /**< Fourth argument of system call.          */
-	word_t arg4;             /**< Fifth argument of system call.           */
-	word_t syscall_nr;       /**< System call number.                      */
-	word_t ret;              /**< Return value of system call.             */
-	struct semaphore syssem; /**< Semaphore to wait a syscall to complete. */
-	struct mutex sysmutex;   /**< Reserve the sysboard by a thread.        */
-	int pending;
-} ALIGN(CACHE_LINE_SIZE) sysboard[CORES_NUM];
+PRIVATE struct sysboard ALIGN(CACHE_LINE_SIZE) sysboard[CORES_NUM];
 
 /**
  * @brief Next core that may request an operation.
@@ -359,6 +348,10 @@ PUBLIC void do_kcall2(void)
 		
 		case NR_unfreeze:
 			kernel_unfreeze();
+			break;
+		
+		case NR_user_syscall_lookup:
+			ret = kernel_user_syscall_lookup();
 			break;
 
 #if (THREAD_MAX > 1)
@@ -680,6 +673,24 @@ PUBLIC int do_kcall(
 	return (ret);
 }
 
+PUBLIC int sysboard_user_syscall_lookup(void)
+{
+	for (int i = 0; i < CORES_NUM; i++)
+	{
+		if (i == COREID_MASTER)
+			continue;
+
+		if (sysboard[i].pending)
+			return 1;
+	}
+	return 0;
+}
+
+PRIVATE void syscall_urea_init(void)
+{
+	uarea.sysboard = &sysboard[1];
+}
+
 /**
  * @brief Initializes the Syscall system.
  */
@@ -694,4 +705,5 @@ PUBLIC void syscall_init(void)
 		semaphore_init(&sysboard[coreid].syssem, 0);
 		mutex_init(&sysboard[coreid].sysmutex);
 	}
+	syscall_urea_init();
 }

@@ -28,6 +28,7 @@
 
 
 #define DELAY 5000000
+#define SYSCALL_CHECK_TRIALS 5
 
 static struct task task;
 int stop = 1;
@@ -62,6 +63,13 @@ static int task_work(
 
 	nanvix_puts("freezing");
 	kcall0(NR_freeze);
+	for (int i = 0; i < SYSCALL_CHECK_TRIALS; i++)
+	{
+		if (!kcall0(NR_user_syscall_lookup))
+			nanvix_puts("no more user calls");
+		else
+			nanvix_puts("there are user calls");
+	}
 
 	delay = 500;
 	while(delay--)
