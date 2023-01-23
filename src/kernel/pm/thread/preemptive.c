@@ -349,6 +349,7 @@ PUBLIC int thread_yield(void)
 		if ((*freezing) && coreid != COREID_MASTER)
 		{
 			next = idle;
+
 			if (curr != idle)
 			{
 				if (curr->state == THREAD_RUNNING)
@@ -493,6 +494,9 @@ PUBLIC void do_thread_schedule(bool is_aging)
 	/* Find the older thread per coreid. */
 	for (int i = 0; i < CORES_NUM; ++i)
 	{
+		if (*freezing && i != COREID_MASTER)
+			continue;
+
 		/* Update thread age. */
 		if (is_aging)
 			curr_threads[i]->age++;

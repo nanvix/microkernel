@@ -298,6 +298,18 @@
 	 */
 	#define NUM_KPAGES (KPOOL_SIZE/PAGE_SIZE)
 
+	EXTERN int *kpages_alias;
+
+	EXTERN bitmap_t *frames_alias;
+
+	#define FRAMES_LENGTH (NUM_UFRAMES/BITMAP_WORD_LENGTH)
+
+
+	static inline vaddr_t kpool_id_to_addr(unsigned id)
+	{
+		return (KPOOL_VIRT + (id << PAGE_SHIFT));
+	}
+
 #ifdef __NANVIX_MICROKERNEL
 
 	/**
@@ -330,10 +342,10 @@
 	 *
 	 * @author Pedro Henrique Penna
 	 */
-	static inline vaddr_t kpool_id_to_addr(unsigned id)
-	{
-		return (KPOOL_VIRT + (id << PAGE_SHIFT));
-	}
+	// static inline vaddr_t kpool_id_to_addr(unsigned id)
+	// {
+	// 	return (KPOOL_VIRT + (id << PAGE_SHIFT));
+	// }
 
 	/**
 	 * @brief Translates a frame number into a virtual address.
@@ -443,6 +455,14 @@
 	 * @brief Number of pages for user use
 	 */
 	#define NUM_UPAGES NUM_UFRAMES
+
+	/**
+	 * @brief Invalidates HW references to a user page.
+	 *
+	 * @param vaddr Target virtual address.
+	 */
+	EXTERN int upage_inval(vaddr_t vaddr);
+	//is this a problem?
 
 #ifdef __NANVIX_MICROKERNEL
 

@@ -42,6 +42,7 @@
  * @brief Bitmap of page frames.
  */
 PRIVATE bitmap_t frames[FRAMES_LENGTH];
+PUBLIC bitmap_t *frames_alias = frames;
 
 /*============================================================================*
  * frame_is_allocated()                                                       *

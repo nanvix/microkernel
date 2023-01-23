@@ -27,9 +27,9 @@
 
 	#include <nanvix/kernel/mm.h>
 	#include <nanvix/hal/cluster.h>
+	#include <nanvix/kernel/thread.h> // is this a problem ?
 #ifdef __NANVIX_MICROKERNEL
 	#include <nanvix/kernel/excp.h>
-	#include <nanvix/kernel/thread.h>
 	#include <nanvix/kernel/sync.h>
 	#include <nanvix/kernel/mailbox.h>
 	#include <nanvix/kernel/portal.h>
@@ -237,9 +237,6 @@
 
 #endif /* __NANVIX_MICROKERNEL */
 
-/*============================================================================*
- * Migration Management Kernel calls                                          *
- *============================================================================*/
 
 #ifdef __NANVIX_MICROKERNEL
 
