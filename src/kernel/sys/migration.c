@@ -36,6 +36,8 @@ int kernel_user_syscall_lookup(void)
 // freeze the cluster
 void kernel_freeze()
 {
+	if (uarea.freezing)
+		return;
 	uarea.freezing = 1;
 	for (int coreid = 0; coreid < CORES_NUM; coreid++)
 	{
@@ -47,6 +49,8 @@ void kernel_freeze()
 // unfreeze the cluster
 void kernel_unfreeze()
 {
+	if (!uarea.freezing)
+		return;
 	uarea.freezing = 0;
 	for (int coreid = 0; coreid < CORES_NUM; coreid++)
 	{
