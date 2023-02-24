@@ -686,7 +686,7 @@ PUBLIC int sysboard_user_syscall_lookup(void)
 	return 0;
 }
 
-PRIVATE void syscall_urea_init(void)
+PRIVATE void syscall_uarea_init(void)
 {
 	uarea.sysboard = &sysboard[1];
 }
@@ -705,5 +705,5 @@ PUBLIC void syscall_init(void)
 		semaphore_init(&sysboard[coreid].syssem, 0);
 		mutex_init(&sysboard[coreid].sysmutex);
 	}
-	syscall_urea_init();
+	syscall_uarea_init();
 }
