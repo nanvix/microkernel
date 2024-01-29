@@ -332,16 +332,10 @@ struct mboot_tag_smbios {
     mboot_uint8_t tables[];
 };
 
-struct mboot_tag_old_acpi {
+struct mboot_tag_acpi {
     mboot_uint32_t type;
     mboot_uint32_t size;
     mboot_uint8_t rsdp[];
-};
-
-struct mboot_tag_new_acpi {
-    mboot_uint32_t type;
-    mboot_uint32_t size;
-    mboot_uint8_t rsdp;
 };
 
 struct mboot_tag_network {
