@@ -89,6 +89,9 @@ static int mboot_parse_mmap(struct mboot_tag *tag)
  */
 static int mboot_parse_acpi(struct mboot_tag *tag)
 {
+    int ret = 0;
+    extern int acpi_info_parse(const void *);
+
     struct mboot_tag_acpi *mboot_tag_acpi = (struct mboot_tag_acpi *)tag;
 
     log(INFO,
@@ -96,9 +99,9 @@ static int mboot_parse_acpi(struct mboot_tag *tag)
         mboot_tag_acpi->size,
         mboot_tag_acpi->rsdp);
 
-    // TODO: parse ACPI information.
+    ret |= acpi_info_parse((void *)mboot_tag_acpi->rsdp);
 
-    return (0);
+    return (ret);
 }
 
 /**
