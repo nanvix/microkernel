@@ -7,6 +7,7 @@
 #define ARCH_X86_CPU_H_
 
 #include <arch/x86/cpu/acpi.h>
+#include <arch/x86/cpu/cpuid.h>
 #include <arch/x86/cpu/excp.h>
 #include <arch/x86/cpu/gdt.h>
 #include <arch/x86/cpu/idt.h>
