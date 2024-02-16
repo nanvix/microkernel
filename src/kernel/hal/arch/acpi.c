@@ -37,6 +37,48 @@ static int do_checksum(const char *start, size_t len)
     return (sum == 0);
 }
 
+/**
+ * @brief Finds an APIC table by its signature.
+ *
+ * @param rsdt Root System Description Table.
+ * @param sig Signature of the table.
+ *
+ * @return Upon successful completion, a pointer to the table is returned.
+ * Upon failure, NULL is returned instead.
+ */
+static void *find_table_by_sig(const struct rsdt_t *rsdt, char *sig)
+{
+    int entries;
+
+    /* Determine which SDT is being used */
+    entries = (rsdt->h.length - sizeof(rsdt->h)) / 4;
+
+    kprintf("entries: %d", entries);
+
+    for (int i = 0; i < entries; i++) {
+        struct acpi_sdt_header *h = (struct acpi_sdt_header *)(rsdt->others[i]);
+
+        // Print signature.
+        char signature[5];
+        __memcpy(signature, h->signature, 4);
+        signature[4] = '\0';
+        log(INFO, "Signature Found: %s", signature);
+
+        // Check signature.
+        if (!__strncmp(h->signature, sig, 4)) {
+            // Validate checksum.
+            if (!do_checksum((char *)h, h->length)) {
+                continue;
+            }
+
+            return (void *)h;
+        }
+    }
+
+    // Table not found.
+    return (NULL);
+}
+
 /*============================================================================*
  * Public Functions                                                           *
  *============================================================================*/
@@ -103,6 +145,14 @@ int acpi_info_parse(const void *info)
     log(INFO, "Creator ID: %d", h->creator_id);
     log(INFO, "Creator Revision: %d", h->creator_rev);
     log(INFO, "SDT Address: %x", rsdt);
+
+    struct madt_t *madt = (struct madt_t *)find_table_by_sig(rsdt, "APIC");
+    if (madt == NULL) {
+        kpanic("MADT not found");
+    }
+    madt = (struct madt_t *)(madt);
+
+    parse_madt(madt);
 
     return (0);
 }
