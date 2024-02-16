@@ -9,6 +9,7 @@ add-symbol-file bin/init.elf
 add-symbol-file bin/test.elf
 handle SIGSEGV nostop noprint nopass
 set confirm off
+set scheduler-locking step on
 focus cmd
 set detach-on-fork
 b kmain
