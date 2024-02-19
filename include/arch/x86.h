@@ -115,6 +115,26 @@ static inline uint32_t input32(uint16_t port)
     return (ret);
 }
 
+/**
+ * @brief Reads the value of the Time Stamp Counter (TSC).
+ *
+ * @return The value of the Time Stamp Counter (TSC).
+ */
+static inline uint64_t rdtsc(void)
+{
+    uint32_t hi, lo;
+    asm volatile("rdtsc" : "=a"(lo), "=d"(hi));
+    return ((uint64_t)lo) | (((uint64_t)hi) << 32);
+}
+
+/**
+ * @brief Pauses the CPU.
+ */
+static inline void pause(void)
+{
+    asm volatile("pause" : :);
+}
+
 #endif /* !_ASM_FILE_ */
 
 #endif /* ARCH_X86_H */
