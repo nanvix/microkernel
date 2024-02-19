@@ -32,6 +32,8 @@ void cpu_init(void)
     KASSERT_SIZE(sizeof(word_t), WORD_SIZE);
     KASSERT_SIZE(sizeof(dword_t), DWORD_SIZE);
 
+    kprintf("[hal] has cpuid? %s", __has_cpuid() ? "yes" : "no");
+
     gdt_init();
     const unsigned kernel_cs = gdt_kernel_cs();
     const unsigned hwint_off = idt_init(kernel_cs);

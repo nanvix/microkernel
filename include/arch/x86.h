@@ -11,6 +11,7 @@
 #include <dev/uart.h>
 #include <nanvix/cc.h>
 #ifndef _ASM_FILE_
+#include <stdbool.h>
 #include <stdint.h>
 #endif /* !_ASM_FILE_ */
 
@@ -134,6 +135,13 @@ static inline void pause(void)
 {
     asm volatile("pause" : :);
 }
+
+/**
+ * @brief Checks if the CPU has the CPUID instruction.
+ *
+ * @return True if the CPU has the CPUID instruction, and false otherwise.
+ */
+extern bool __has_cpuid(void);
 
 #endif /* !_ASM_FILE_ */
 
