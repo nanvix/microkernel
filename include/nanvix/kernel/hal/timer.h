@@ -15,6 +15,14 @@
 /**@{*/
 
 /*============================================================================*
+ * Imports                                                                    *
+ *============================================================================*/
+
+#ifndef _ASM_FILE_
+#include <stdint.h>
+#endif /* !_ASM_FILE_ */
+
+/*============================================================================*
  * Functions                                                                  *
  *============================================================================*/
 
@@ -26,6 +34,13 @@
  * @param freq Target frequency for the timer device.
  */
 extern void timer_init(unsigned freq);
+
+/**
+ * @brief Gets the frequency of the CPU.
+ *
+ * @return The frequency of the CPU in hertz.
+ */
+uint64_t get_cpu_freq(void);
 
 #endif /* _ASM_FILE_ */
 

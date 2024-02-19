@@ -94,6 +94,43 @@
 /**@}*/
 
 /*============================================================================*
+ * Private Functions                                                          *
+ *============================================================================*/
+
+/**
+ * @details Gets the frequency of the CPU.
+ */
+uint64_t get_cpu_freq(void)
+{
+    static uint64_t cpuhz = 0;
+    if (cpuhz == 0) {
+        // Setup PIT for terminal count starting from 2^16 - 1
+        uint64_t xticks = 0x000000000000FFFFull;
+        output8(PIT_CTRL,
+                PIT_SEL0 | PIT_ACC_LOHI | PIT_MODE_TCOUNT | PIT_BINARY);
+        output8(PIT_DATA, xticks % 256);
+        output8(PIT_DATA, xticks / 256);
+
+        // Wait until OUT bit of status byte is set
+        uint64_t s = rdtsc();
+        do {
+            output8(PIT_CTRL, PIT_RB | PIT_RB_COUNT | PIT_RB_CNTR0);
+            if (rdtsc() - s > 1ULL << 32) {
+                kprintf("PIT stuck, assuming 2GHz");
+                cpuhz = 2 * 1000 * 1000 * 1000;
+                return cpuhz;
+            }
+        } while (!(input8(PIT_DATA) & PIT_STAT_OUT));
+        uint64_t e = rdtsc();
+
+        cpuhz = ((e - s) * 10000000) / ((xticks * 10000000) / PIT_FREQUENCY);
+    }
+
+    kprintf("cpu freq: %d Hz", cpuhz);
+    return (cpuhz);
+}
+
+/*============================================================================*
  * Public Functions                                                           *
  *============================================================================*/
 
