@@ -126,7 +126,7 @@ uint64_t get_cpu_freq(void)
         cpuhz = ((e - s) * 10000000) / ((xticks * 10000000) / PIT_FREQUENCY);
     }
 
-    kprintf("cpu freq: %d Hz", cpuhz);
+    // kprintf("cpu freq: %d Hz", cpuhz);
     return (cpuhz);
 }
 

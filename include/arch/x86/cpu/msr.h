@@ -24,6 +24,29 @@
 #endif /* !_ASM_FILE_ */
 
 /*============================================================================*
+ * Constants                                                                  *
+ *============================================================================*/
+
+/**
+ * @brief APIC base register.
+ *
+ * @details This register holds the APIC base address, permitting the relocation
+ * of the APIC memory map.
+ */
+#define MSR_IA32_APIC_BASE 0x0000001b
+
+/**
+ * @addtogroup x86-cpu-msr-ia32-apic-base IA32_APIC_BASE
+ * @ingroup x86-cpu-msr
+ */
+/**@{*/
+#define MSR_IA32_APIC_BASE_BSP (1 << 8)            /** BSP Flag (R/W)      */
+#define MSR_IA32_APIC_BASE_X2APIC (1 << 10)        /** x2APIC Enable (R/W) */
+#define MSR_IA32_APIC_BASE_ENABLE (1 << 11)        /** APIC Enable (R/W)   */
+#define MSR_IA32_APIC_BASE_BASE 0x7ffffffffffff000 /** APIC Base Address   */
+/**@}*/
+
+/*============================================================================*
  * Functions                                                                  *
  *============================================================================*/
 

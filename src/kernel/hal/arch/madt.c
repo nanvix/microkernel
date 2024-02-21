@@ -232,7 +232,7 @@ int parse_madt(struct madt_t *madt)
     struct madt_entry_header *entry = (struct madt_entry_header *)madt->entries;
     uint32_t madt_len = madt->h.length;
     log(INFO,
-        "local_apic_addr=%lx, entry=%lx, madt=%lx, madt_len=%d",
+        "local_apic_addr=%x, entry=%x, madt=%x, madt_len=%d",
         madt->local_apic_addr,
         ((char *)entry),
         ((char *)madt),
@@ -272,6 +272,9 @@ int parse_madt(struct madt_t *madt)
         }
         entry = (struct madt_entry_header *)((char *)entry + entry->entry_len);
     }
+
+    extern void apic_init(void);
+    apic_init();
 
     return (0);
 }
