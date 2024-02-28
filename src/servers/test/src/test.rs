@@ -447,6 +447,90 @@ fn test_mailbox_tag() -> bool {
     true
 }
 
+// Test systemcall for ipc module
+fn test_mailbox_is_assigned() -> bool {
+    let mbxid: i32 = 58; // 58 is the ENOTSUP error code
+    if mbxid != ipc::mailbox_is_assigned(mbxid){
+        return false;
+    }
+
+    true
+}
+
+// Test systemcall for method of ipc module
+fn test_mailbox_owner() -> bool {
+    let mbxid: i32 = 58; // 58 is the ENOTSUP error code
+    if mbxid != ipc::mailbox_owner(mbxid){
+        return false;
+    }
+
+    true
+}
+
+// Test systemcall for method of ipc module
+fn test_mailbox_default() -> bool {
+    let mbxid: i32 = 58; // 58 is the ENOTSUP error code
+    if mbxid != ipc::mailbox_default(mbxid){
+        return false;
+    }
+
+    true
+}
+
+// Test systemcall for method of ipc module
+fn test_mailbox_assign() -> bool {
+    let mbxid: i32 = 58; // 58 is the ENOTSUP error code
+    if mbxid != ipc::mailbox_assign(mbxid, 2, 3){
+        return false;
+    }
+
+    true
+}
+
+// Test systemcall for method of ipc module
+fn test_mailbox_link() -> bool {
+    let mbxid: i32 = 58; // 58 is the ENOTSUP error code
+    if mbxid != ipc::mailbox_link(mbxid){
+        return false;
+    }
+
+    true
+}
+
+// Test systemcall for method of ipc module
+fn test_mailbox_unlink() -> bool {
+    let mbxid: i32 = 58; // 58 is the ENOTSUP error code
+    if mbxid != ipc::mailbox_unlink(mbxid){
+        return false;
+    }
+
+    true
+}
+
+// Test systemcall for method of ipc module
+fn test_mailbox_push() -> bool {
+    let mbxid: i32 = 58; // 58 is the ENOTSUP error code
+    let msg: i32 = 2;
+    let sz: i32 = 32;
+    if mbxid != ipc::mailbox_push(mbxid, &msg, sz){
+        return false;
+    }
+
+    true
+}
+
+// Test systemcall for method of ipc module
+fn test_mailbox_pop() -> bool {
+    let mbxid: i32 = 58; // 58 is the ENOTSUP error code
+    let msg: i32 = 2;
+    let sz: i32 = 32;
+    if mbxid != ipc::mailbox_pop(mbxid, &msg, sz){
+        return false;
+    }
+
+    true
+}
+
 /// Test if Semaphore Handler kernel call is working.
 fn test_semop_call() -> bool {
     let id: u32 = 1;
@@ -502,4 +586,12 @@ pub fn test_kernel_calls() {
     test!(test_semop_call());
     test!(test_semctl_call());
     test!(test_mailbox_tag());
+    test!(test_mailbox_is_assigned());
+    test!(test_mailbox_owner());
+    test!(test_mailbox_default());
+    test!(test_mailbox_assign());
+    test!(test_mailbox_link());
+    test!(test_mailbox_unlink());
+    test!(test_mailbox_push());
+    test!(test_mailbox_pop());
 }

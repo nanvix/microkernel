@@ -6,6 +6,8 @@
 #ifndef NANVIX_KERNEL_IPC_MAILBOX_H_
 #define NANVIX_KERNEL_IPC_MAILBOX_H_
 
+#include <nanvix/kernel/pm.h>
+
 /**
  * @addtogroup kernel-ipc-mailbox Mailbox
  * @ingroup kernel-ipc
@@ -23,6 +25,50 @@
  */
 extern void mailbox_init(void);
 
+/**
+ * @brief Checks wether a mailbox is assigned.
+ */
+extern int mailbox_is_assigned(const int);
+
+/**
+ * @brief Gets the owner of a mailbox.
+ */
+extern pid_t mailbox_owner(const int);
+
+/**
+ * @brief Gets the tag of a mailbox.
+ */
+extern int mailbox_tag(const int);
+
+/**
+ * @brief Initializes a mailbox with the default values.
+ */
+extern int mailbox_default(const int);
+
+/**
+ * @brief Assigns a mailbox.
+ */
+extern int mailbox_assign(const int, const pid_t, const int);
+
+/**
+ * @brief Links a mailbox.
+ */
+extern int mailbox_link(const int);
+
+/**
+ * @brief Unlinks a mailbox.
+ */
+extern int mailbox_unlink(const int);
+
+/**
+ * @brief Pushes a message into a mailbox.
+ */
+extern int mailbox_push(const int, const void *, const size_t);
+
+/**
+ * Pop a message from a mailbox.
+ */
+extern int mailbox_pop(const int, void *, const size_t);
 /*============================================================================*/
 
 /**@}*/

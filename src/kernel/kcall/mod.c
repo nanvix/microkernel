@@ -148,6 +148,30 @@ int do_kcall(word_t arg0, word_t arg1, word_t arg2, word_t arg3, word_t arg4,
         case NR_mailbox_tag:
             ret = kcall_mailbox_tag((int)arg0);
             break;
+        case NR_mailbox_is_assigned:
+            ret = kcall_mailbox_is_assigned((int)arg0);
+            break;
+        case NR_mailbox_owner:
+            ret = kcall_mailbox_owner((int)arg0);
+            break;
+        case NR_mailbox_default:
+            ret = kcall_mailbox_default((int)arg0);
+            break;
+        case NR_mailbox_assign:
+            ret = kcall_mailbox_assign((int)arg0, (int)arg1, (int)arg3);
+            break;
+        case NR_mailbox_link:
+            ret = kcall_mailbox_link((int)arg0);
+            break;
+        case NR_mailbox_unlink:
+            ret = kcall_mailbox_unlink((int)arg0);
+            break;
+        case NR_mailbox_push:
+            ret = kcall_mailbox_push((int)arg0, (void *)arg1, (int)arg2);
+            break;
+        case NR_mailbox_pop:
+            ret = kcall_mailbox_pop((int)arg0, (void *)arg1, (int)arg2);
+            break;
         default:
             // Copy kernel call parameters.
             scoreboard.kcall_nr = kcall_nr;

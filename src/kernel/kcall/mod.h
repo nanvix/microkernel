@@ -226,6 +226,92 @@ extern int kcall_semget(unsigned key);
 extern int kcall_mailbox_tag(int mbxid);
 
 /**
+ * @brief Checks whether a mailbox is assigned.
+ *
+ * @param mbxid mailbox ID.
+ *
+ * @returns Upon successful (mailbox is assigned), returns 1. Upon Failure,
+ * returns 0.
+ */
+extern int kcall_mailbox_is_assigned(int mbxid);
+
+/**
+ * @brief Gets the owner of a mailbox.
+ *
+ * @param mbxid mailbox ID.
+ *
+ * @returns Upon successful, returns the owner. Upon Failure,
+ * returns a negative error code, -EBADF(-8).
+ */
+extern pid_t kcall_mailbox_owner(int mbxid);
+
+/**
+ * @brief Initializes a mailbox with the default values.
+ *
+ * @param mbxid mailbox ID.
+ *
+ * @returns Upon successful, returns the 0. Upon Failure,
+ * returns a negative error code. -EBADF(-8).
+ */
+extern int kcall_mailbox_default(int mbxid);
+
+/**
+ * @brief Assigns a mailbox.
+ *
+ * @param mbxid mailbox ID.
+ * @param owner owner of box
+ * @param tag tag of box
+ *
+ * @returns Upon successful, returns the 0. Upon Failure,
+ * returns a negative error code. -EBADF(-8).
+ */
+extern int kcall_mailbox_assign(int mbxid, pid_t owner, int tag);
+
+/**
+ * @brief Links a mailbox.
+ *
+ * @param mbxid mailbox ID.
+ *
+ * @returns Upon successful, returns the 0. Upon Failure,
+ * returns a negative error code. -EBADF(-8).
+ */
+extern int kcall_mailbox_link(int mbxid);
+
+/**
+ * @brief Unlinks a mailbox.
+ *
+ * @param mbxid mailbox ID.
+ *
+ * @returns Upon successful, returns the 0. Upon Failure,
+ * returns a negative error code. -EBADF(-8).
+ */
+extern int kcall_mailbox_unlink(int mbxid);
+
+/**
+ * @brief Pushes a message into a mailbox.
+ *
+ * @param mbxid mailbox ID.
+ * @param msg message
+ * @param sz size of message
+ *
+ * @returns Upon successful, returns the 0. Upon Failure,
+ * returns a negative error code.
+ */
+extern int kcall_mailbox_push(int mbxid, void *msg, size_t sz);
+
+/**
+ * @brief Pop a message from a mailbox.
+ *
+ * @param mbxid mailbox ID.
+ * @param msg message
+ * @param sz size of message
+ *
+ * @returns Upon successful, returns the 0. Upon Failure,
+ * returns a negative error code.
+ */
+extern int kcall_mailbox_pop(int mbxid, void *msg, size_t sz);
+
+/**
  * @brief Verify if process can operate in semaphore (id), and operate (op):
  *
  * @param id Semaphore Identifier.
