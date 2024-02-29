@@ -84,7 +84,7 @@ extern int semaphore_get(int semid);
  *
  * @param key Semaphore key.
  *
- * @return (0) if successful , (-1) otherwise, (semid) if key already exist.
+ * @return (-2) if key already exist, (semid) if successful, (-1) otherwise.
  */
 extern int semaphore_create(unsigned key);
 
@@ -112,6 +112,15 @@ extern void semtable_init(void);
  * @return 0 if successful, -1 otherwise.
  */
 extern int semaphore_set(int semid, int count);
+
+/*
+ * @brief Return semaphore id.
+ *
+ * @p key Key associated with the semaphore.
+ *
+ * @return Semaphore id if key associated exist, -1 otherwise.
+ */
+extern int semaphore_getid(int key);
 
 /**
  * @brief Performs a down operation in a semaphore.

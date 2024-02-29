@@ -150,7 +150,7 @@ int semaphore_set(int semid, int count)
  *
  * @param semid Semaphore id.
  *
- * @return (0) if successful , (-1) otherwise.
+ * @return (semid) if successful , (-1) otherwise.
  */
 int semaphore_get(int semid)
 {
@@ -161,7 +161,7 @@ int semaphore_get(int semid)
 
     // Verify if semaphore already was get.
     if (is_semaphore_get(semid)) {
-        return (0);
+        return (semid);
     }
 
     struct process *currproc = process_get_curr();
@@ -169,7 +169,7 @@ int semaphore_get(int semid)
     for (int i = 0; i < PROCESS_MAX; i++) {
         if (semtable[semid].proc_user[i] == -1) {
             semtable[semid].proc_user[i] = currproc->pid;
-            return (0);
+            return (semid);
         }
     }
 
@@ -181,14 +181,14 @@ int semaphore_get(int semid)
  *
  * @param key Semaphore key.
  *
- * @return (0) if successful , (-1) otherwise, (semid) if key already exist.
+ * @return (-2) if key already exist, (semid) if successful, (-1) otherwise.
  */
 int semaphore_create(unsigned key)
 {
     // Check if key already exist
     int key_semid = key_check(key);
     if (key_semid != -1) {
-        return (key_semid);
+        return (-2);
     }
 
     // Found SEMAPHORE_INACTIVE semaphores
@@ -200,7 +200,7 @@ int semaphore_create(unsigned key)
             semtable[semid].state = SEMAPHORE_ACTIVE;
             semtable[semid].key = key;
 
-            return (0);
+            return (semid);
         }
     }
 
@@ -237,6 +237,40 @@ int semaphore_delete(int semid)
     }
 
     return (-1);
+}
+
+/*
+ * @brief Return value of semaphore count.
+ *
+ * @p semid Semaphore id.
+ *
+ * @return (Semaphore count) if successful , (-1) otherwise.
+ */
+int semaphore_getcount(int semid)
+{
+    // Verify if semaphore is SEMAPHORE_ACTIVE.
+    if (!is_semaphore_SEMAPHORE_ACTIVE(semid)) {
+        return (-1);
+    }
+
+    // Verify if semaphore is get.
+    if (!is_semaphore_get(semid)) {
+        return (-1);
+    }
+
+    return (semtable[semid].count);
+}
+
+/*
+ * @brief Return semaphore id.
+ *
+ * @p key Key associated with the semaphore.
+ *
+ * @return Semaphore id if key associated exist, -1 otherwise.
+ */
+int semaphore_getid(int key)
+{
+    return (key_check(key));
 }
 
 /*
