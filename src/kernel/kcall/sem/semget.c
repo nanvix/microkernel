@@ -26,7 +26,7 @@ int kcall_semget(unsigned key)
     // Try create a semaphore.
     switch (ret) {
         case 0:
-            return (0);
+            return (semaphore_getid(key));
         case -1:
             return (-1);
         default:
@@ -36,11 +36,10 @@ int kcall_semget(unsigned key)
 
     // Try get semaphore.
     ret = semaphore_get(semid);
-    switch (ret) {
-        case 0:
-            return (0);
-        default:
-            return (-1);
+    if (ret == -1) {
+        return (-1);
+    } else {
+        return (ret);
     }
 
     return (-1);
