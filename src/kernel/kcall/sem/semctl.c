@@ -20,8 +20,16 @@
  */
 int kcall_semctl(int id, int cmd, int val)
 {
-    // TODO: https://github.com/nanvix/microkernel/issues/391
+    switch (cmd) {
+        case 0:
+            return (semaphore_getcount(id));
+        case 1:
+            return (semaphore_set(id, val));
+        case 2:
+            return (semaphore_delete(id));
+        default:
+            return (-1);
+    }
 
-    // Return to test syscall.
-    return (id + cmd + val);
+    return (-1);
 }

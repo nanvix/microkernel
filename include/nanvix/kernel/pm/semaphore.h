@@ -122,6 +122,15 @@ extern int semaphore_set(int semid, int count);
  */
 extern int semaphore_getid(int key);
 
+/*
+ * @brief Return value of semaphore count.
+ *
+ * @p semid Semaphore id.
+ *
+ * @return (Semaphore count) if successful , (-1) otherwise.
+ */
+extern int semaphore_getcount(int semid);
+
 /**
  * @brief Performs a down operation in a semaphore.
  *
