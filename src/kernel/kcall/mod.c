@@ -158,7 +158,7 @@ int do_kcall(word_t arg0, word_t arg1, word_t arg2, word_t arg3, word_t arg4,
             ret = kcall_mailbox_default((int)arg0);
             break;
         case NR_mailbox_assign:
-            ret = kcall_mailbox_assign((int)arg0, (int)arg1, (int)arg3);
+            ret = kcall_mailbox_assign((int)arg0, (int)arg1, (int)arg2);
             break;
         case NR_mailbox_link:
             ret = kcall_mailbox_link((int)arg0);

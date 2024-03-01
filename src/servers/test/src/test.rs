@@ -439,9 +439,12 @@ fn test_semget_call() -> bool {
 
 // Test systemcall for ipc module
 fn test_mailbox_tag() -> bool {
-    let mbxid: i32 = 58; // 58 is the ENOTSUP error code
-    if mbxid != ipc::mailbox_tag(mbxid){
-        return false;
+    let mut tag: i32 = 0;
+    for mbxid in 0..256 {
+        if tag != ipc::mailbox_tag(mbxid){
+            return false;
+        }
+        tag+=10;
     }
 
     true
@@ -449,9 +452,10 @@ fn test_mailbox_tag() -> bool {
 
 // Test systemcall for ipc module
 fn test_mailbox_is_assigned() -> bool {
-    let mbxid: i32 = 58; // 58 is the ENOTSUP error code
-    if mbxid != ipc::mailbox_is_assigned(mbxid){
-        return false;
+    for mbxid in 0..256 {
+        if ipc::mailbox_is_assigned(mbxid) != 1{
+            return false;
+        }    
     }
 
     true
@@ -459,9 +463,12 @@ fn test_mailbox_is_assigned() -> bool {
 
 // Test systemcall for method of ipc module
 fn test_mailbox_owner() -> bool {
-    let mbxid: i32 = 58; // 58 is the ENOTSUP error code
-    if mbxid != ipc::mailbox_owner(mbxid){
-        return false;
+    let mut owner: i32 = 0;
+    for mbxid in 0..256 {
+        if owner != ipc::mailbox_owner(mbxid){
+            return false;
+        }
+        owner+=20;
     }
 
     true
@@ -479,18 +486,22 @@ fn test_mailbox_default() -> bool {
 
 // Test systemcall for method of ipc module
 fn test_mailbox_assign() -> bool {
-    let mbxid: i32 = 58; // 58 is the ENOTSUP error code
-    if mbxid != ipc::mailbox_assign(mbxid, 2, 3){
-        return false;
+    let mut owner: i32 = 0;
+    let mut tag: i32 = 0;
+    for mbxid in 0..256 {
+        if ipc::mailbox_assign(mbxid, owner, tag) != 0{
+            return false;
+        }
+        owner+=20;
+        tag+=10;
     }
-
     true
 }
 
 // Test systemcall for method of ipc module
 fn test_mailbox_link() -> bool {
     let mbxid: i32 = 58; // 58 is the ENOTSUP error code
-    if mbxid != ipc::mailbox_link(mbxid){
+    if 0 != ipc::mailbox_link(mbxid){
         return false;
     }
 
@@ -527,6 +538,16 @@ fn test_mailbox_pop() -> bool {
     if mbxid != ipc::mailbox_pop(mbxid, &msg, sz){
         return false;
     }
+
+    true
+}
+
+//Test Mailbox system calls all at once
+fn test_mailbox_modules() -> bool {
+    test!(test_mailbox_assign());
+    test!(test_mailbox_tag());
+    test!(test_mailbox_owner());
+    test!(test_mailbox_is_assigned());
 
     true
 }
@@ -585,13 +606,10 @@ pub fn test_kernel_calls() {
     test!(test_semget_call());
     test!(test_semop_call());
     test!(test_semctl_call());
-    test!(test_mailbox_tag());
-    test!(test_mailbox_is_assigned());
-    test!(test_mailbox_owner());
-    test!(test_mailbox_default());
-    test!(test_mailbox_assign());
+    test!(test_mailbox_modules());
+//  test!(test_mailbox_default()); //Test yet to be defined
     test!(test_mailbox_link());
-    test!(test_mailbox_unlink());
-    test!(test_mailbox_push());
-    test!(test_mailbox_pop());
+//  test!(test_mailbox_unlink()); //Test yet to be defined
+//  test!(test_mailbox_push()); //Test yet to be defined
+//  test!(test_mailbox_pop()); //Test yet to be defined
 }

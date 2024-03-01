@@ -25,9 +25,7 @@
  */
 int kcall_mailbox_tag(int mbxid)
 {
-    UNUSED(mbxid);
-
-    return (ENOTSUP);
+    return (mailbox_tag(mbxid));
 }
 
 /**
@@ -35,9 +33,7 @@ int kcall_mailbox_tag(int mbxid)
  */
 int kcall_mailbox_is_assigned(const int mbxid)
 {
-    UNUSED(mbxid);
-
-    return (ENOTSUP);
+    return (mailbox_is_assigned(mbxid));
 }
 
 /**
@@ -45,9 +41,7 @@ int kcall_mailbox_is_assigned(const int mbxid)
  */
 pid_t kcall_mailbox_owner(const int mbxid)
 {
-    UNUSED(mbxid);
-
-    return (ENOTSUP);
+    return (mailbox_owner(mbxid));
 }
 
 /**
@@ -55,9 +49,7 @@ pid_t kcall_mailbox_owner(const int mbxid)
  */
 int kcall_mailbox_default(const int mbxid)
 {
-    UNUSED(mbxid);
-
-    return (ENOTSUP);
+    return (mailbox_default(mbxid));
 }
 
 /**
@@ -65,11 +57,7 @@ int kcall_mailbox_default(const int mbxid)
  */
 int kcall_mailbox_assign(const int mbxid, const pid_t owner, const int tag)
 {
-    UNUSED(mbxid);
-    UNUSED(owner);
-    UNUSED(tag);
-
-    return (ENOTSUP);
+    return (mailbox_assign(mbxid, owner, tag));
 }
 
 /**
@@ -77,9 +65,7 @@ int kcall_mailbox_assign(const int mbxid, const pid_t owner, const int tag)
  */
 int kcall_mailbox_link(const int mbxid)
 {
-    UNUSED(mbxid);
-
-    return (ENOTSUP);
+    return (mailbox_link(mbxid));
 }
 
 /**
@@ -87,9 +73,7 @@ int kcall_mailbox_link(const int mbxid)
  */
 int kcall_mailbox_unlink(const int mbxid)
 {
-    UNUSED(mbxid);
-
-    return (ENOTSUP);
+    return (mailbox_unlink(mbxid));
 }
 
 /**
@@ -97,11 +81,7 @@ int kcall_mailbox_unlink(const int mbxid)
  */
 int kcall_mailbox_push(const int mbxid, const void *msg, const size_t sz)
 {
-    UNUSED(mbxid);
-    UNUSED(msg);
-    UNUSED(sz);
-
-    return (ENOTSUP);
+    return (mailbox_push(mbxid, msg, sz));
 }
 
 /**
@@ -109,9 +89,5 @@ int kcall_mailbox_push(const int mbxid, const void *msg, const size_t sz)
  */
 int kcall_mailbox_pop(const int mbxid, void *msg, const size_t sz)
 {
-    UNUSED(mbxid);
-    UNUSED(msg);
-    UNUSED(sz);
-
-    return (0);
+    return (mailbox_pop(mbxid, msg, sz));
 }
