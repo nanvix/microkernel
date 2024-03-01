@@ -439,10 +439,115 @@ fn test_semget_call() -> bool {
 
 // Test systemcall for ipc module
 fn test_mailbox_tag() -> bool {
+    let mut tag: i32 = 0;
+    for mbxid in 0..256 {
+        if tag != ipc::mailbox_tag(mbxid){
+            return false;
+        }
+        tag+=10;
+    }
+
+    true
+}
+
+// Test systemcall for ipc module
+fn test_mailbox_is_assigned() -> bool {
+    for mbxid in 0..256 {
+        if ipc::mailbox_is_assigned(mbxid) != 1{
+            return false;
+        }    
+    }
+
+    true
+}
+
+// Test systemcall for method of ipc module
+fn test_mailbox_owner() -> bool {
+    let mut owner: i32 = 0;
+    for mbxid in 0..256 {
+        if owner != ipc::mailbox_owner(mbxid){
+            return false;
+        }
+        owner+=20;
+    }
+
+    true
+}
+
+// Test systemcall for method of ipc module
+fn test_mailbox_default() -> bool {
     let mbxid: i32 = 58; // 58 is the ENOTSUP error code
-    if mbxid != ipc::mailbox_tag(mbxid){
+    if mbxid != ipc::mailbox_default(mbxid){
         return false;
     }
+
+    true
+}
+
+// Test systemcall for method of ipc module
+fn test_mailbox_assign() -> bool {
+    let mut owner: i32 = 0;
+    let mut tag: i32 = 0;
+    for mbxid in 0..256 {
+        if ipc::mailbox_assign(mbxid, owner, tag) != 0{
+            return false;
+        }
+        owner+=20;
+        tag+=10;
+    }
+    true
+}
+
+// Test systemcall for method of ipc module
+fn test_mailbox_link() -> bool {
+    let mbxid: i32 = 58; // 58 is the ENOTSUP error code
+    if 0 != ipc::mailbox_link(mbxid){
+        return false;
+    }
+
+    true
+}
+
+// Test systemcall for method of ipc module
+fn test_mailbox_unlink() -> bool {
+    let mbxid: i32 = 58; // 58 is the ENOTSUP error code
+    if mbxid != ipc::mailbox_unlink(mbxid){
+        return false;
+    }
+
+    true
+}
+
+// Test systemcall for method of ipc module
+fn test_mailbox_push() -> bool {
+    let mbxid: i32 = 58; // 58 is the ENOTSUP error code
+    let msg: i32 = 2;
+    let sz: i32 = 32;
+    if mbxid != ipc::mailbox_push(mbxid, &msg, sz){
+        return false;
+    }
+
+    true
+}
+
+// Test systemcall for method of ipc module
+fn test_mailbox_pop() -> bool {
+    let mbxid: i32 = 58; // 58 is the ENOTSUP error code
+    let msg: i32 = 2;
+    let sz: i32 = 32;
+    if mbxid != ipc::mailbox_pop(mbxid, &msg, sz){
+        return false;
+    }
+
+    true
+}
+
+//Test Mailbox system calls all at once
+fn test_mailbox_modules() -> bool {
+    test!(test_mailbox_assign());
+    test!(test_mailbox_tag());
+    test!(test_mailbox_owner());
+    test!(test_mailbox_is_assigned());
 
     true
 }
@@ -501,5 +606,10 @@ pub fn test_kernel_calls() {
     test!(test_semget_call());
     test!(test_semop_call());
     test!(test_semctl_call());
-    test!(test_mailbox_tag());
+    test!(test_mailbox_modules());
+//  test!(test_mailbox_default()); //Test yet to be defined
+    test!(test_mailbox_link());
+//  test!(test_mailbox_unlink()); //Test yet to be defined
+//  test!(test_mailbox_push()); //Test yet to be defined
+//  test!(test_mailbox_pop()); //Test yet to be defined
 }
