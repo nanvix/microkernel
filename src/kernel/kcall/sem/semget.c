@@ -25,10 +25,13 @@ int kcall_semget(unsigned key)
 
     // Try create a semaphore.
     switch (ret) {
-        case 0:
-            return (semaphore_getid(key));
+        case -2:
+            // Return semaphore id if success in get semaphore or return error
+            semaphore_getid(key) >= 0 ? (ret = semaphore_getid(key))
+                                      : (ret = -ENOBUFS);
+            return (ret);
         case -1:
-            return (-1);
+            return (-ENOBUFS);
         default:
             semid = ret;
             break;
@@ -36,11 +39,9 @@ int kcall_semget(unsigned key)
 
     // Try get semaphore.
     ret = semaphore_get(semid);
-    if (ret == -1) {
-        return (-1);
-    } else {
+    if (ret != -1) {
         return (ret);
     }
 
-    return (-1);
+    return (-ENOENT);
 }

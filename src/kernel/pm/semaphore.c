@@ -126,7 +126,8 @@ static int semaphore_drop(int semid)
  *
  * @param count Semaphore counter.
  *
- * @return 0 if successful, -1 otherwise.
+ * @return (0) if successful , (-1) if semaphore inactive, (-2) if
+ * not allowed.
  */
 int semaphore_set(int semid, int count)
 {
@@ -137,7 +138,7 @@ int semaphore_set(int semid, int count)
 
     // Verify if semaphore is get.
     if (!is_semaphore_get(semid)) {
-        return (-1);
+        return (-2);
     }
 
     semaphore_init(&semtable[semid], count);
@@ -212,7 +213,8 @@ int semaphore_create(unsigned key)
  *
  * @param semid Semaphore id.
  *
- * @return (0) if successful , (-1) otherwise.
+ * @return (0) if successful , (-1) if semaphore inactive, (-2) if
+ * not allowed.
  */
 int semaphore_delete(int semid)
 {
@@ -223,7 +225,7 @@ int semaphore_delete(int semid)
 
     // Verify if semaphore is get.
     if (!is_semaphore_get(semid)) {
-        return (-1);
+        return (-2);
     }
 
     struct process *currproc = process_get_curr();
@@ -244,7 +246,8 @@ int semaphore_delete(int semid)
  *
  * @p semid Semaphore id.
  *
- * @return (Semaphore count) if successful , (-1) otherwise.
+ * @return (Semaphore count) if successful , (-1) if semaphore inactive, (-2) if
+ * not allowed.
  */
 int semaphore_getcount(int semid)
 {
@@ -255,7 +258,7 @@ int semaphore_getcount(int semid)
 
     // Verify if semaphore is get.
     if (!is_semaphore_get(semid)) {
-        return (-1);
+        return (-2);
     }
 
     return (semtable[semid].count);

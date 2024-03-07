@@ -6,6 +6,7 @@
 #ifndef NANVIX_KERNEL_PM_SEMAPHORE_H_
 #define NANVIX_KERNEL_PM_SEMAPHORE_H_
 
+#include <nanvix/errno.h>
 #include <nanvix/kernel/hal.h>
 #include <nanvix/kernel/lib.h>
 #include <nanvix/kernel/pm/cond.h>
@@ -93,7 +94,8 @@ extern int semaphore_create(unsigned key);
  *
  * @param semid Semaphore id.
  *
- * @return (0) if successful , (-1) otherwise.
+ * @return (0) if successful , (-1) if semaphore inactive, (-2) if
+ * not allowed.
  */
 extern int semaphore_delete(int semid);
 
@@ -109,7 +111,8 @@ extern void semtable_init(void);
  *
  * @param count Semaphore counter.
  *
- * @return 0 if successful, -1 otherwise.
+ * @return (0) if successful , (-1) if semaphore inactive, (-2) if
+ * not allowed.
  */
 extern int semaphore_set(int semid, int count);
 
@@ -127,7 +130,7 @@ extern int semaphore_getid(int key);
  *
  * @p semid Semaphore id.
  *
- * @return (Semaphore count) if successful , (-1) otherwise.
+ * @return -2 (Semaphore count) if successful , (-1) otherwise.
  */
 extern int semaphore_getcount(int semid);
 

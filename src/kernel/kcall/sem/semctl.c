@@ -20,16 +20,33 @@
  */
 int kcall_semctl(int id, int cmd, int val)
 {
+    int ret = -1;
+
     switch (cmd) {
         case 0:
-            return (semaphore_getcount(id));
+            ret = semaphore_getcount(id);
+            if (ret < 0) {
+                // Semaphore inactive or didn't get.
+                ret == -1 ? (ret = -ENOENT) : (ret = -EACCES);
+            }
+            return (ret);
         case 1:
-            return (semaphore_set(id, val));
+            ret = semaphore_set(id, val);
+            if (ret < 0) {
+                // Semaphore inactive or didn't get.
+                ret == -1 ? (ret = -ENOENT) : (ret = -EACCES);
+            }
+            return (ret);
         case 2:
-            return (semaphore_delete(id));
+            ret = semaphore_delete(id);
+            if (ret < 0) {
+                // Semaphore inactive or didn't get.
+                ret == -1 ? (ret = -ENOENT) : (ret = -EACCES);
+            }
+            return (ret);
         default:
-            return (-1);
+            return (-EBADMSG);
     }
 
-    return (-1);
+    return (-EBADMSG);
 }
