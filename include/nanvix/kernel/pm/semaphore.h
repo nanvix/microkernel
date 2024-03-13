@@ -75,7 +75,7 @@ static inline void semaphore_init(struct semaphore *sem, int x)
  *
  * @param semid Semaphore id.
  *
- * @return (0) if successful , (-1) otherwise.
+ * @return (semid) if successful , (-1) otherwise.
  */
 extern int semaphore_get(int semid);
 
