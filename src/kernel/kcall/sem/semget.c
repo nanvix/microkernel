@@ -12,6 +12,20 @@
 #include <nanvix/kernel/pm/semaphore.h>
 
 /*============================================================================*
+ * Constants                                                                  *
+ *============================================================================*/
+
+/**
+ * @brief Semaphore key Exist
+ */
+#define SEMAPHORE_KEYEXIST -2
+
+/**
+ * @brief Semaphore Buffer is Full
+ */
+#define SEMAPHORE_ENOBUFS -1
+
+/*============================================================================*
  * Public Functions                                                           *
  *============================================================================*/
 
@@ -25,12 +39,12 @@ int kcall_semget(unsigned key)
 
     // Try create a semaphore.
     switch (ret) {
-        case -2:
+        case SEMAPHORE_KEYEXIST:
             // Return semaphore id if success in get semaphore or return error
             semaphore_getid(key) >= 0 ? (ret = semaphore_getid(key))
                                       : (ret = -ENOBUFS);
             return (ret);
-        case -1:
+        case SEMAPHORE_ENOBUFS:
             return (-ENOBUFS);
         default:
             semid = ret;
