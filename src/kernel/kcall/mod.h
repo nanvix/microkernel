@@ -246,16 +246,6 @@ extern int kcall_mailbox_is_assigned(int mbxid);
 extern pid_t kcall_mailbox_owner(int mbxid);
 
 /**
- * @brief Initializes a mailbox with the default values.
- *
- * @param mbxid mailbox ID.
- *
- * @returns Upon successful, returns the 0. Upon Failure,
- * returns a negative error code. -EBADF(-8).
- */
-extern int kcall_mailbox_default(int mbxid);
-
-/**
  * @brief Assigns a mailbox.
  *
  * @param mbxid mailbox ID.

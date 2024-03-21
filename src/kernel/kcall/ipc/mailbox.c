@@ -21,35 +21,11 @@
  *============================================================================*/
 
 /**
- * Gets mailbox tag.
- */
-int kcall_mailbox_tag(int mbxid)
-{
-    return (mailbox_tag(mbxid));
-}
-
-/**
- * Checks whether a mailbox is assigned.
- */
-int kcall_mailbox_is_assigned(const int mbxid)
-{
-    return (mailbox_is_assigned(mbxid));
-}
-
-/**
  * Gets the owner of a mailbox.
  */
 pid_t kcall_mailbox_owner(const int mbxid)
 {
     return (mailbox_owner(mbxid));
-}
-
-/**
- * Initializes a mailbox with the default values.
- */
-int kcall_mailbox_default(const int mbxid)
-{
-    return (mailbox_default(mbxid));
 }
 
 /**

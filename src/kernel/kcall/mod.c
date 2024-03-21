@@ -145,17 +145,8 @@ int do_kcall(word_t arg0, word_t arg1, word_t arg2, word_t arg3, word_t arg4,
         case NR_thread_yield:
             kcall_thread_yield();
             break;
-        case NR_mailbox_tag:
-            ret = kcall_mailbox_tag((int)arg0);
-            break;
-        case NR_mailbox_is_assigned:
-            ret = kcall_mailbox_is_assigned((int)arg0);
-            break;
         case NR_mailbox_owner:
             ret = kcall_mailbox_owner((int)arg0);
-            break;
-        case NR_mailbox_default:
-            ret = kcall_mailbox_default((int)arg0);
             break;
         case NR_mailbox_assign:
             ret = kcall_mailbox_assign((int)arg0, (int)arg1, (int)arg2);

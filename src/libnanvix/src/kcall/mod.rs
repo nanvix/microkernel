@@ -47,15 +47,12 @@ pub enum KcallNumbers {
     Semget = 18,
     Semop = 19,
     Semctl = 20,
-    Boxtag = 25,
-    MbIsAssigned = 26,
     MbOwner = 27,
-    MbDefault = 28,
-    MbAssign = 29,
-    MbLink = 30,
-    MbUnlink = 31,
-    MbPush = 32,
-    MbPop = 33,
+    MbAssign = 28,
+    MbLink = 29,
+    MbUnlink = 30,
+    MbPush = 31,
+    MbPop = 32,
 }
 
 //==============================================================================

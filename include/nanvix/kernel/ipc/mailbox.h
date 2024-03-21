@@ -26,24 +26,9 @@
 extern void mailbox_init(void);
 
 /**
- * @brief Checks wether a mailbox is assigned.
- */
-extern int mailbox_is_assigned(const int);
-
-/**
  * @brief Gets the owner of a mailbox.
  */
 extern pid_t mailbox_owner(const int);
-
-/**
- * @brief Gets the tag of a mailbox.
- */
-extern int mailbox_tag(const int);
-
-/**
- * @brief Initializes a mailbox with the default values.
- */
-extern int mailbox_default(const int);
 
 /**
  * @brief Assigns a mailbox.
