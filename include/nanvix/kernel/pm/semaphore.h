@@ -75,7 +75,8 @@ static inline void semaphore_init(struct semaphore *sem, int x)
  *
  * @param semid Semaphore id.
  *
- * @return (0) if successful , (-1) otherwise.
+ * @return Upon successful completion, (semid) is returned. Upon failure, a
+ * negative error code is returned instead.
  */
 extern int semaphore_get(int semid);
 
@@ -84,7 +85,8 @@ extern int semaphore_get(int semid);
  *
  * @param key Semaphore key.
  *
- * @return (0) if successful , (-1) otherwise, (semid) if key already exist.
+ * @return Upon successful completion, (semid) is returned. Upon failure, a
+ * negative error code is returned instead.
  */
 extern int semaphore_create(unsigned key);
 
@@ -93,7 +95,8 @@ extern int semaphore_create(unsigned key);
  *
  * @param semid Semaphore id.
  *
- * @return (0) if successful , (-1) otherwise.
+ * @return Upon successful completion, zero is returned. Upon failure, a
+ * negative error code is returned instead.
  */
 extern int semaphore_delete(int semid);
 
@@ -109,9 +112,30 @@ extern void semtable_init(void);
  *
  * @param count Semaphore counter.
  *
- * @return 0 if successful, -1 otherwise.
+ * @return Upon successful completion, zero is returned. Upon failure, a
+ * negative error code is returned instead.
  */
 extern int semaphore_set(int semid, int count);
+
+/*
+ * @brief Return semaphore id.
+ *
+ * @p key Key associated with the semaphore.
+ *
+ * @return Upon successful completion, (semid) is returned. Upon failure, a
+ * negative error code is returned instead.
+ */
+extern int semaphore_getid(int key);
+
+/*
+ * @brief Return value of semaphore count.
+ *
+ * @p semid Semaphore id.
+ *
+ * @return Upon successful completion, Semaphore Count is returned. Upon
+ * failure, a negative error code is returned instead.
+ */
+extern int semaphore_getcount(int semid);
 
 /**
  * @brief Performs a down operation in a semaphore.

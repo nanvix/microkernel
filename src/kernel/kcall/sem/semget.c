@@ -7,6 +7,7 @@
  * Imports                                                                    *
  *============================================================================*/
 
+#include <nanvix/errno.h>
 #include <nanvix/kernel/lib.h>
 #include <nanvix/kernel/pm/process.h>
 #include <nanvix/kernel/pm/semaphore.h>
@@ -25,10 +26,12 @@ int kcall_semget(unsigned key)
 
     // Try create a semaphore.
     switch (ret) {
-        case 0:
-            return (0);
-        case -1:
-            return (-1);
+        case -EEXIST:
+            // Return semaphore id if success in get semaphore or return error
+            ret = semaphore_getid(key);
+            return (ret);
+        case -ENOBUFS:
+            return (-ENOBUFS);
         default:
             semid = ret;
             break;
@@ -36,12 +39,9 @@ int kcall_semget(unsigned key)
 
     // Try get semaphore.
     ret = semaphore_get(semid);
-    switch (ret) {
-        case 0:
-            return (0);
-        default:
-            return (-1);
+    if (ret >= 0) {
+        return (ret);
     }
 
-    return (-1);
+    return (-ENOENT);
 }

@@ -469,12 +469,43 @@ fn test_semop_call() -> bool {
 
 /// Test if Semaphore Controler kernel call is working.
 fn test_semctl_call() -> bool {
-    let id: u32 = 1;
-    let cmd: u32 = 1;
-    let val: u32 = 1;
-    let result: i32 = pm::semctl(id, cmd, val);
-    if result != 3 {
+    let key: u32 = 2012;
+    let id: i32 = pm::semget(key);
+
+    if id == -1 {
         return false;
+    }
+
+    let val: u32 = 1;
+
+    // Test command 1 Set count id.
+    {
+        let semaphore_setvalue: u32 = 1;
+        let result: i32 = pm::semctl(id as u32, semaphore_setvalue, val);
+
+        if result == -1 {
+            return false;
+        }
+    }
+
+    // Test command 0 Get count id.
+    {
+        let semaphore_getvalue: u32 = 0;
+        let result: i32 = pm::semctl(id as u32, semaphore_getvalue, val);
+
+        if result as u32 != val {
+            return false;
+        }
+    }
+
+    // Test command 2 Delete Semaphore.
+    {
+        let semaphore_delete: u32 = 2;
+        let result: i32 = pm::semctl(id as u32, semaphore_delete, val);
+
+        if result == -1 {
+            return false;
+        }
     }
 
     true
