@@ -472,8 +472,8 @@ fn test_semctl_call() -> bool {
 
     // Test command 1 Set count id.
     {
-        let cmd: u32 = 1;
-        let result: i32 = pm::semctl(id as u32, cmd, val);
+        let semaphore_setvalue: u32 = 1;
+        let result: i32 = pm::semctl(id as u32, semaphore_setvalue, val);
 
         if result == -1 {
             return false;
@@ -482,8 +482,8 @@ fn test_semctl_call() -> bool {
 
     // Test command 0 Get count id.
     {
-        let cmd: u32 = 0;
-        let result: i32 = pm::semctl(id as u32, cmd, val);
+        let semaphore_getvalue: u32 = 0;
+        let result: i32 = pm::semctl(id as u32, semaphore_getvalue, val);
 
         if result as u32 != val {
             return false;
@@ -492,8 +492,8 @@ fn test_semctl_call() -> bool {
 
     // Test command 2 Delete Semaphore.
     {
-        let cmd: u32 = 2;
-        let result: i32 = pm::semctl(id as u32, cmd, val);
+        let semaphore_delete: u32 = 2;
+        let result: i32 = pm::semctl(id as u32, semaphore_delete, val);
 
         if result == -1 {
             return false;

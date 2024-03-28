@@ -7,23 +7,10 @@
  * Imports                                                                    *
  *============================================================================*/
 
+#include <nanvix/errno.h>
 #include <nanvix/kernel/lib.h>
 #include <nanvix/kernel/pm/process.h>
 #include <nanvix/kernel/pm/semaphore.h>
-
-/*============================================================================*
- * Constants                                                                  *
- *============================================================================*/
-
-/**
- * @brief Semaphore key Exist
- */
-#define SEMAPHORE_KEYEXIST -2
-
-/**
- * @brief Semaphore Buffer is Full
- */
-#define SEMAPHORE_ENOBUFS -1
 
 /*============================================================================*
  * Public Functions                                                           *
@@ -39,12 +26,11 @@ int kcall_semget(unsigned key)
 
     // Try create a semaphore.
     switch (ret) {
-        case SEMAPHORE_KEYEXIST:
+        case -EEXIST:
             // Return semaphore id if success in get semaphore or return error
-            semaphore_getid(key) >= 0 ? (ret = semaphore_getid(key))
-                                      : (ret = -ENOBUFS);
+            ret = semaphore_getid(key);
             return (ret);
-        case SEMAPHORE_ENOBUFS:
+        case -ENOBUFS:
             return (-ENOBUFS);
         default:
             semid = ret;
@@ -53,7 +39,7 @@ int kcall_semget(unsigned key)
 
     // Try get semaphore.
     ret = semaphore_get(semid);
-    if (ret != -1) {
+    if (ret >= 0) {
         return (ret);
     }
 

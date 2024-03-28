@@ -7,6 +7,7 @@
  * Imports                                                                    *
  *============================================================================*/
 
+#include <nanvix/errno.h>
 #include <nanvix/kernel/hal.h>
 #include <nanvix/kernel/lib.h>
 #include <nanvix/kernel/log.h>
@@ -126,19 +127,19 @@ static int semaphore_drop(int semid)
  *
  * @param count Semaphore counter.
  *
- * @return (0) if successful , (-1) if semaphore inactive, (-2) if
- * not allowed.
+ * @return Upon successful completion, zero is returned. Upon failure, a
+ * negative error code is returned instead.
  */
 int semaphore_set(int semid, int count)
 {
     // Verify if semaphore is SEMAPHORE_ACTIVE.
     if (!is_semaphore_SEMAPHORE_ACTIVE(semid)) {
-        return (-1);
+        return (-ENOENT);
     }
 
     // Verify if semaphore is get.
     if (!is_semaphore_get(semid)) {
-        return (-2);
+        return (-EACCES);
     }
 
     semaphore_init(&semtable[semid], count);
@@ -151,13 +152,14 @@ int semaphore_set(int semid, int count)
  *
  * @param semid Semaphore id.
  *
- * @return (semid) if successful , (-1) otherwise.
+ * @return Upon successful completion, (semid) is returned. Upon failure, a
+ * negative error code is returned instead.
  */
 int semaphore_get(int semid)
 {
     // Verify if semaphore is SEMAPHORE_ACTIVE.
     if (!is_semaphore_SEMAPHORE_ACTIVE(semid)) {
-        return (-1);
+        return (-ENOENT);
     }
 
     // Verify if semaphore already was get.
@@ -174,7 +176,7 @@ int semaphore_get(int semid)
         }
     }
 
-    return (-1);
+    return (-ENOBUFS);
 }
 
 /**
@@ -182,14 +184,15 @@ int semaphore_get(int semid)
  *
  * @param key Semaphore key.
  *
- * @return (-2) if key already exist, (semid) if successful, (-1) otherwise.
+ * @return Upon successful completion, (semid) is returned. Upon failure, a
+ * negative error code is returned instead.
  */
 int semaphore_create(unsigned key)
 {
     // Check if key already exist
     int key_semid = key_check(key);
     if (key_semid != -1) {
-        return (-2);
+        return (-EEXIST);
     }
 
     // Found SEMAPHORE_INACTIVE semaphores
@@ -205,7 +208,7 @@ int semaphore_create(unsigned key)
         }
     }
 
-    return (-1);
+    return (-ENOBUFS);
 }
 
 /**
@@ -213,32 +216,34 @@ int semaphore_create(unsigned key)
  *
  * @param semid Semaphore id.
  *
- * @return (0) if successful , (-1) if semaphore inactive, (-2) if
- * not allowed.
+ * @return Upon successful completion, zero is returned. Upon failure, a
+ * negative error code is returned instead.
  */
 int semaphore_delete(int semid)
 {
     // Verify if semaphore is SEMAPHORE_ACTIVE.
     if (!is_semaphore_SEMAPHORE_ACTIVE(semid)) {
-        return (-1);
+        return (-ENOENT);
     }
 
     // Verify if semaphore is get.
     if (!is_semaphore_get(semid)) {
-        return (-2);
+        return (-EACCES);
     }
 
     struct process *currproc = process_get_curr();
 
-    // If currproc is owner delete semaphore, else, drop semaphore.
+    // If currproc is owner, delete semaphore, else, drop semaphore.
     if (semtable[semid].proc_owner == currproc->pid) {
         semtable[semid].state = SEMAPHORE_INACTIVE;
         return (0);
-    } else {
-        return semaphore_drop(semid);
     }
 
-    return (-1);
+    if (semaphore_drop(semid)) {
+        return (0);
+    }
+
+    return (-EBADMSG);
 }
 
 /*
@@ -246,19 +251,19 @@ int semaphore_delete(int semid)
  *
  * @p semid Semaphore id.
  *
- * @return (Semaphore count) if successful , (-1) if semaphore inactive, (-2) if
- * not allowed.
+ * @return Upon successful completion, Semaphore Count is returned. Upon
+ * failure, a negative error code is returned instead.
  */
 int semaphore_getcount(int semid)
 {
     // Verify if semaphore is SEMAPHORE_ACTIVE.
     if (!is_semaphore_SEMAPHORE_ACTIVE(semid)) {
-        return (-1);
+        return (-ENOENT);
     }
 
     // Verify if semaphore is get.
     if (!is_semaphore_get(semid)) {
-        return (-2);
+        return (-EACCES);
     }
 
     return (semtable[semid].count);
@@ -269,11 +274,17 @@ int semaphore_getcount(int semid)
  *
  * @p key Key associated with the semaphore.
  *
- * @return Semaphore id if key associated exist, -1 otherwise.
+ * @return Upon successful completion, (semid) is returned. Upon failure, a
+ * negative error code is returned instead.
  */
 int semaphore_getid(int key)
 {
-    return (key_check(key));
+    int semid = key_check(key);
+
+    if (semid != -1) {
+        return (semid);
+    }
+    return (-ENOENT);
 }
 
 /*

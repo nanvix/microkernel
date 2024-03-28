@@ -6,7 +6,6 @@
 #ifndef NANVIX_KERNEL_PM_SEMAPHORE_H_
 #define NANVIX_KERNEL_PM_SEMAPHORE_H_
 
-#include <nanvix/errno.h>
 #include <nanvix/kernel/hal.h>
 #include <nanvix/kernel/lib.h>
 #include <nanvix/kernel/pm/cond.h>
@@ -76,7 +75,8 @@ static inline void semaphore_init(struct semaphore *sem, int x)
  *
  * @param semid Semaphore id.
  *
- * @return (semid) if successful , (-1) otherwise.
+ * @return Upon successful completion, (semid) is returned. Upon failure, a
+ * negative error code is returned instead.
  */
 extern int semaphore_get(int semid);
 
@@ -85,7 +85,8 @@ extern int semaphore_get(int semid);
  *
  * @param key Semaphore key.
  *
- * @return (-2) if key already exist, (semid) if successful, (-1) otherwise.
+ * @return Upon successful completion, (semid) is returned. Upon failure, a
+ * negative error code is returned instead.
  */
 extern int semaphore_create(unsigned key);
 
@@ -94,8 +95,8 @@ extern int semaphore_create(unsigned key);
  *
  * @param semid Semaphore id.
  *
- * @return (0) if successful , (-1) if semaphore inactive, (-2) if
- * not allowed.
+ * @return Upon successful completion, zero is returned. Upon failure, a
+ * negative error code is returned instead.
  */
 extern int semaphore_delete(int semid);
 
@@ -111,8 +112,8 @@ extern void semtable_init(void);
  *
  * @param count Semaphore counter.
  *
- * @return (0) if successful , (-1) if semaphore inactive, (-2) if
- * not allowed.
+ * @return Upon successful completion, zero is returned. Upon failure, a
+ * negative error code is returned instead.
  */
 extern int semaphore_set(int semid, int count);
 
@@ -121,7 +122,8 @@ extern int semaphore_set(int semid, int count);
  *
  * @p key Key associated with the semaphore.
  *
- * @return Semaphore id if key associated exist, -1 otherwise.
+ * @return Upon successful completion, (semid) is returned. Upon failure, a
+ * negative error code is returned instead.
  */
 extern int semaphore_getid(int key);
 
@@ -130,7 +132,8 @@ extern int semaphore_getid(int key);
  *
  * @p semid Semaphore id.
  *
- * @return -2 (Semaphore count) if successful , (-1) otherwise.
+ * @return Upon successful completion, Semaphore Count is returned. Upon
+ * failure, a negative error code is returned instead.
  */
 extern int semaphore_getcount(int semid);
 

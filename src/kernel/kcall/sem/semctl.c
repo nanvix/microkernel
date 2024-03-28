@@ -7,6 +7,7 @@
  * Imports                                                                    *
  *============================================================================*/
 
+#include <nanvix/errno.h>
 #include <nanvix/kernel/lib.h>
 #include <nanvix/kernel/pm/process.h>
 #include <nanvix/kernel/pm/semaphore.h>
@@ -39,32 +40,20 @@
  */
 int kcall_semctl(int id, int cmd, int val)
 {
-    int ret = -1;
+    int ret = -EINVAL;
 
     switch (cmd) {
         case SEMAPHORE_GETVALUE:
             ret = semaphore_getcount(id);
-            if (ret < 0) {
-                // Semaphore inactive or didn't get.
-                ret == -1 ? (ret = -ENOENT) : (ret = -EACCES);
-            }
             return (ret);
         case SEMAPHORE_SETVALUE:
             ret = semaphore_set(id, val);
-            if (ret < 0) {
-                // Semaphore inactive or didn't get.
-                ret == -1 ? (ret = -ENOENT) : (ret = -EACCES);
-            }
             return (ret);
         case SEMAPHORE_DELETE:
             ret = semaphore_delete(id);
-            if (ret < 0) {
-                // Semaphore inactive or didn't get.
-                ret == -1 ? (ret = -ENOENT) : (ret = -EACCES);
-            }
             return (ret);
         default:
-            return (-EBADMSG);
+            return (ret);
     }
 
     return (-EBADMSG);
